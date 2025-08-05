@@ -13,11 +13,13 @@ const useAppContext = create<{
   elapsedTime: number;
   openDrawer: boolean;
   progress: number;
+  preview: string | null;
   setConfig: (config: SetConfig) => void;
   setStatus: (status: Status) => void;
   setElapsedTime: (elapsedTime: number) => void;
   setOpenDrawer: (openDrawer: boolean) => void;
   setProgress: (progress: number) => void;
+  setPreview: (preview: string | null) => void;
 }>(set => ({
   blurType: BlurType.Horizontal,
   config: DEFAULT_CONFIG,
@@ -26,6 +28,8 @@ const useAppContext = create<{
   progress: 0,
   openDrawer: false,
   ffmpeg: new FFmpeg(),
+  preview: null,
+  setPreview: (preview: string | null) => set({ preview }),
   setBlurType: (blurType: BlurType) => set({ blurType }),
   // TODO : ?
   setConfig: (config: SetConfig) => {

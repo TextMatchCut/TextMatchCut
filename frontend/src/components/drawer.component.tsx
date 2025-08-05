@@ -24,9 +24,12 @@ const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
 
   return (
     <div
-      className={cn({
-        hidden: !openDrawer,
-      })}
+      className={cn(
+        {
+          hidden: !openDrawer,
+        },
+        'fixed bottom-0 left-0 w-full h-full'
+      )}
     >
       <div
         className="absolute bg-black/35 w-full h-full bottom-0 left-0"
@@ -37,8 +40,8 @@ const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
           'absolute w-full flex h-[70vh] max-h-[500px] overflow-hidden bg-card bottom-0 left-0 justify-center items-center'
         )}
         style={{
-          borderTopLeftRadius: '1rem',
-          borderTopRightRadius: '1rem',
+          borderTopLeftRadius: __DESKTOP__ ? '1rem' : '5rem',
+          borderTopRightRadius: __DESKTOP__ ? '1rem' : '5rem',
         }}
       >
         <Progress

@@ -22,9 +22,9 @@ import Drawer from '@/components/drawer.component';
 import { getDummySnippets, loadWasmBackend, loadFFmpeg } from '@/lib/utils';
 import ConfigForm from './components/config-form.component';
 import toast from './lib/toast';
+import { Events } from '@wailsio/runtime';
 
 const MainView = () => {
-  const [preview, setPreview] = useState<string>();
   const {
     config,
     openDrawer,
@@ -36,12 +36,23 @@ const MainView = () => {
     status,
     ffmpeg,
     setProgress,
+    preview,
+    setPreview,
   } = useAppContext(s => s);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const messageRef = useRef<HTMLParagraphElement | null>(null);
 
   const loading = status === 'loading';
   useEffect(() => {
+    Events.On('frameRendered', args => {
+      console.log(args.data);
+      const { frameNum, totalFrames, frameData } = args.data;
+      const p = (frameNum / totalFrames) * 100;
+      console.log({ p, status });
+      setProgress(p);
+      setPreview(`data:image/png;base64,${frameData}`);
+    });
+
     async function writeAssets() {
       await ffmpeg.load();
       await ffmpeg.createDir('/vid');
@@ -70,6 +81,15 @@ const MainView = () => {
       setStatus('ready');
     }
     __DESKTOP__ ? init() : initWeb();
+    return () => {
+      Events.Off('frameRendered');
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
+      if (videoSrc) {
+        URL.revokeObjectURL(videoSrc);
+      }
+    };
   }, []);
 
   // async function cleanUp(){
@@ -94,27 +114,33 @@ const MainView = () => {
   }
 
   async function renderFrameWeb(i: number, input: any, write: boolean = true) {
-    const frame = `/vid/frame-${i + 1}.png`;
-    console.log({ input });
-    const base64String = (window as any).GenerateFrameFromJSON(
-      JSON.stringify(input)
-    );
-    if (write) {
-      await ffmpeg.writeFile(
-        frame,
-        Uint8Array.from(atob(base64String), c => c.charCodeAt(0))
+    return new Promise<void>(async (resolve, reject) => {
+      const frame = `/vid/frame-${i + 1}.png`;
+      console.log({ input });
+      const base64String = (window as any).GenerateFrameFromJSON(
+        JSON.stringify(input)
       );
-    }
+      if (write) {
+        await ffmpeg.writeFile(
+          frame,
+          Uint8Array.from(atob(base64String), c => c.charCodeAt(0))
+        );
+      }
 
-    // 3. Display the resulting image
-    console.log('Image frame rendered:', i + 1);
-    return { frame, url: `data:image/png;base64,${base64String}` };
+      console.log('Image frame rendered:', i + 1);
+      setPreview(`data:image/png;base64,${base64String}`);
+      const p = ((i + 1) / 5) * 100;
+      console.log({ p, status });
+      setProgress(p);
+      setTimeout(() => {
+        resolve();
+      }, 50); // Ensure UI updates before resolving //react was a wrong pick for this project - i realized it once it's too late
+    });
   }
 
   async function renderPreview() {
     if (preview) {
       URL.revokeObjectURL(preview);
-      setPreview(undefined);
     }
     try {
       // const input = {
@@ -140,7 +166,6 @@ const MainView = () => {
   async function renderPreviewWeb() {
     if (preview) {
       URL.revokeObjectURL(preview);
-      setPreview(undefined);
     }
     // await ffmpegRef.current.load();
     try {
@@ -152,8 +177,7 @@ const MainView = () => {
         highlightRadius: 400.0,
         totalFrames: 1,
       };
-      const { frame, url } = await renderFrameWeb(0, input, false);
-      setPreview(url);
+      await renderFrameWeb(0, input, false);
     } catch (err) {
       setStatus('error');
       toast({
@@ -171,8 +195,6 @@ const MainView = () => {
     // }
 
     try {
-      const time = new Date().getTime();
-      console.log('Generating image at', time);
       const input = {
         frameNum: -1,
         config,
@@ -195,15 +217,12 @@ const MainView = () => {
       //     }
       //   });
       // }
-      const frames: Record<string, string> = {};
 
       console.log('FFmpeg loaded, starting image generation...');
       for (let i = 0; i < 5; i++) {
         try {
           input.frameNum = i + 1; // Update frame number
-          // 3. Display the resulting image
-          const { frame, url } = await renderFrameWeb(i, input);
-          frames[frame] = url;
+          await renderFrameWeb(i, input);
         } catch (err) {
           console.error('Error calling WASM function:', err);
         }
@@ -232,19 +251,15 @@ const MainView = () => {
         '-y',
         'output.mp4',
       ]);
-      console.log('FFmpeg processing completed, reading output file...');
 
       const fileData = await ffmpeg.readFile('output.mp4');
       console.log('Output file read successfully:', fileData);
       //@ts-ignore
       const data = new Uint8Array(fileData as ArrayBuffer);
+      setPreview(null);
       setVideoSrc(
         URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }))
       );
-      const endTime = new Date().getTime();
-      const elapsed = (endTime - time) / 1000;
-      console.log('Image generation completed in', elapsed, 'seconds');
-      setElapsedTime(elapsed);
     } catch (error) {
       // await ffmpegRef.current.deleteDir('/vid');
 
@@ -267,8 +282,22 @@ const MainView = () => {
         console.log('Video generation completed in', elapsed, 'seconds');
         setElapsedTime(elapsed);
       })
-      .catch(err => console.error('Error calling WASM function:', err));
+      .catch(err => {
+        console.error('Error calling WASM function:', err);
+      });
   }
+
+  async function downloadVideoWeb() {
+    if (!videoSrc) return;
+
+    const link = document.createElement('a');
+    link.href = videoSrc;
+    link.download = `output-${config.HighlightedText}-${Date.now()}.mp4`;
+    link.click();
+  }
+
+  async function showVideoLocation() {}
+
   return (
     <>
       <Card className="mx-auto">
@@ -280,7 +309,7 @@ const MainView = () => {
             output.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 grid-cols-1 sm:grid-cols-2">
+        <CardContent className="grid gap-6 grid-cols-1 sm:grid-cols-2 max-w-lg m-auto">
           <ConfigForm />
         </CardContent>
 
@@ -363,20 +392,45 @@ const MainView = () => {
                 </h2>
 
                 <PhotoView src={preview}>
-                  <img src={preview} alt="Preview" />
+                  <div className="rounded-md overflow-hidden">
+                    <img
+                      src={preview}
+                      data-preview-img
+                      alt="Preview"
+                      className="cursor-pointer object-cover"
+                    />
+                  </div>
                 </PhotoView>
 
-                <Button onClick={__DESKTOP__ ? renderVideo : renderVideoWeb}>
-                  Render Video
+                <Button
+                  className="mt-4"
+                  onClick={
+                    __DESKTOP__
+                      ? actionStandalone(renderVideo)
+                      : actionStandalone(renderVideoWeb)
+                  }
+                >
+                  Render Full Video
                 </Button>
               </>
             ) : null}
             {videoSrc ? (
-              <video
-                controls
-                style={{ maxWidth: '100%', height: 'auto' }}
-                src={videoSrc || undefined}
-              ></video>
+              <>
+                <h2 className="text-center text-lg font-semibold mb-4">
+                  Output
+                </h2>
+                <video
+                  controls
+                  style={{ maxWidth: '100%', height: 'auto' }}
+                  src={videoSrc || undefined}
+                ></video>
+                <Button
+                  className="mt-4"
+                  onClick={__DESKTOP__ ? showVideoLocation : downloadVideoWeb}
+                >
+                  Download
+                </Button>
+              </>
             ) : null}
           </div>
         </PhotoProvider>

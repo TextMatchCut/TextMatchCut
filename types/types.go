@@ -97,3 +97,9 @@ type RenderPreviewResponse struct {
 	Error     string `json:"error,omitempty"`
 	FrameData string `json:"frameData,omitempty"`
 }
+
+type FrameRenderedPayload struct {
+	FrameNum    int    `json:"frameNum"`
+	TotalFrames int    `json:"totalFrames"`
+	FrameData   string `json:"frameData"`
+}

@@ -4,8 +4,9 @@ import (
 	"TextMatchCut/core"
 	"TextMatchCut/lib/gemini"
 	"TextMatchCut/types"
+	"bytes"
 	"context"
-	"encoding/base64" // <-- Import base64
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	go_runtime "runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -42,7 +44,7 @@ func (a *App) Run(config types.Config) types.RunResponse {
 	dev := false
 
 	if dev {
-		outputPath, err := generateFrames(config, getDummySnippets(config))
+		outputPath, err := generateFrames(config, getDummySnippets(config), *a)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return types.RunResponse{Success: false, Error: err.Error()}
@@ -78,7 +80,7 @@ func (a *App) Run(config types.Config) types.RunResponse {
 		config.FontSize = int(float64(config.Height) * 0.05)
 	}
 
-	videoData, err := generateFrames(config, aiSnippets)
+	videoData, err := generateFrames(config, aiSnippets, *a)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return types.RunResponse{Success: false, Error: err.Error()}
@@ -101,26 +103,16 @@ func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
 		fmt.Fprintf(os.Stderr, "Error generating preview: %v\n", err)
 		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
 	}
-	tmp_file := filepath.Join(os.TempDir(), "preview"+generateUniqueFilename("", "png"))
-	file, err := os.Create(tmp_file)
-	if err != nil {
-		return types.RenderPreviewResponse{Success: false, Error: fmt.Sprintf("Error creating preview file: %v", err)}
-	}
-	defer file.Close()
 
-	err = png.Encode(file, finalImage)
+	var buffer bytes.Buffer
+	err = png.Encode(&buffer, finalImage)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading preview file: %v\n", err)
 		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
 	}
 
-	fData, err := os.ReadFile(tmp_file)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading preview file: %v\n", err)
-		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
-	}
+	fData := buffer.Bytes()
 	frameData := base64.StdEncoding.EncodeToString(fData)
-	// Do something with finalImage
 	return types.RenderPreviewResponse{Success: true, FrameData: frameData}
 }
 
@@ -244,7 +236,7 @@ func generateUniqueFilename(prefix, extension string) string {
 }
 
 // Generate video frames and return base64 data
-func generateFrames(config types.Config, aiSnippets []types.TextSnippet) (string, error) {
+func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) (string, error) {
 	if config.Verbose {
 		fmt.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
@@ -316,12 +308,25 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet) (string
 			return "", fmt.Errorf("failed to create frame file: %v", err)
 		}
 
-		err = png.Encode(file, finalImage)
-		file.Close()
+		var buffer bytes.Buffer
+		err = png.Encode(&buffer, finalImage)
 		if err != nil {
-			return "", fmt.Errorf("failed to encode frame: %v", err)
+			fmt.Fprintf(os.Stderr, "Error reading preview file: %v\n", err)
+			return "", fmt.Errorf("failed to encode frame %d: %v", frameNum, err)
 		}
 
+		fData := buffer.Bytes()
+		_, err = file.Write(fData)
+		if err != nil {
+			return "", fmt.Errorf("failed to write frame %d: %v", frameNum, err)
+		}
+		file.Close()
+		frameData := base64.StdEncoding.EncodeToString(fData)
+		runtime.EventsEmit(a.ctx, "frameRendered", types.FrameRenderedPayload{
+			FrameNum:    frameNum + 1,
+			TotalFrames: totalFrames,
+			FrameData:   frameData,
+		})
 		// Progress update
 		if config.Verbose && (frameNum+1)%(totalFrames/10) == 0 {
 			fmt.Printf("Progress: %d/%d frames\n", frameNum+1, totalFrames)
@@ -481,4 +486,27 @@ func getDummySnippets(config types.Config) []types.TextSnippet {
 	}
 
 	return aiSnippets
+}
+
+func ShowFileOnExplorer(filePath string) {
+	if filePath == "" {
+		fmt.Println("No file path provided")
+		return
+	}
+
+	// Use the appropriate command based on the OS
+	var cmd *exec.Cmd
+	switch go_runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", "/select,", filePath)
+	case "darwin":
+		cmd = exec.Command("open", "-R", filePath)
+	default: // Linux and others
+		cmd = exec.Command("xdg-open", filePath)
+	}
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error opening file explorer: %v\n", err)
+	}
 }

@@ -53,5 +53,3 @@ require (
 	golang.org/x/text v0.27.0 // indirect
 	google.golang.org/genai v1.18.0
 )
-
-// replace github.com/wailsapp/wails/v2 v2.10.1 => /home/uncore/go/pkg/mod

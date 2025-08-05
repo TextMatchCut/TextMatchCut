@@ -133,6 +133,12 @@ func generateUniqueFilename(prefix, extension string) string {
 func createTextImageFrame(config types.Config, snippet types.TextSnippet, fontPath string, highlightCenterX, highlightCenterY float64) (image.Image, error) {
 	// Create context
 	dc := gg.NewContext(config.Width, config.Height)
+
+	backgroundImage, err := gg.LoadImage("./frontend/public/test-bg.jpg")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load background image: %v", err)
+	}
+	dc.DrawImage(backgroundImage, 0, 0)
 	// try to center the text
 	dc.Translate(
 		float64(config.Width/2-int(highlightCenterX)),
@@ -162,7 +168,7 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, fontPa
 
 	// Set background
 	dc.SetRGBA255(int(bgColor.R), int(bgColor.G), int(bgColor.B), int(bgColor.A))
-	dc.Clear()
+	// dc.Clear()
 
 	// Load font
 	ttfFont, err := loadFont(fontPath, float64(config.FontSize))

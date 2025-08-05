@@ -13,6 +13,7 @@ import { rgbaToHex, hexToRgba } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import Sfx from './sfx.component';
 import SfxWeb from './sfx.web.component';
+import BackgroundInput from './background-input.component';
 
 const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
   const setConfig = useAppContext(s => s.setConfig);
@@ -32,7 +33,7 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           }
         />
       </div>
-      <div>
+      <div className="flex flex-col gap-4">
         <Label htmlFor="highlight-color">Highlight Color</Label>
         <Input
           id="highlight-color"
@@ -51,8 +52,6 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
             });
           }}
         />
-      </div>
-      <div>
         <Label htmlFor="text-color">Text Color</Label>
         <Input
           id="text-color"
@@ -67,23 +66,6 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
               TextColor: hexToRgba(e.target.value),
             })
           }
-        />
-      </div>
-      <div>
-        <Label htmlFor="background-color">Background Color</Label>
-        <Input
-          id="background-color"
-          type="color"
-          value={rgbaToHex(
-            config.BackgroundColor as [number, number, number, number],
-            false
-          )}
-          onChange={e => {
-            setConfig({
-              ...config,
-              BackgroundColor: hexToRgba(e.target.value),
-            });
-          }}
         />
       </div>
       <div>
@@ -156,6 +138,8 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           }
         />
       </div>
+      <BackgroundInput />
+
       <div>
         <Label htmlFor="blur-type">Blur Type</Label>
         <div className="flex items-center justify-between space-x-2">
