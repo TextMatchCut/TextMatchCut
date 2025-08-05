@@ -7,8 +7,8 @@ import MainView from './main.view';
 
 function App() {
   return (
-    <div className="w-full min-w-[100%] flex flex-col h-screen">
-      <div className="w-full h-full bg-blue-500 min-w-[100%]  relative">
+    <div className="w-full h-full flex flex-col h-screen">
+      <div className="w-full h-full relative">
         <MainView />
       </div>
       {__DESKTOP__ ? <StatusBar /> : null}

@@ -72,6 +72,22 @@ export namespace types {
 	        this.path = source["path"];
 	    }
 	}
+	export class RenderPreviewResponse {
+	    success: boolean;
+	    error?: string;
+	    frameData?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RenderPreviewResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.error = source["error"];
+	        this.frameData = source["frameData"];
+	    }
+	}
 	export class RunResponse {
 	    success: boolean;
 	    error?: string;

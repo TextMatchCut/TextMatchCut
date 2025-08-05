@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Howl } from 'howler';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Play } from 'lucide-react';
@@ -21,8 +21,11 @@ const Sfx = () => {
   const setStatus = useAppContext(s => s.setStatus);
   const ffmpeg = useAppContext(s => s.ffmpeg);
 
-  const howlerInstance = useRef(
-    new Howl({
+  const howlerInstance = useRef<Howl | null>(null);
+
+  // Initialize Howl instance only once when component mounts
+  useEffect(() => {
+    const howl = new Howl({
       src: ['shutter.wav'],
       preload: true,
       onload: () => {
@@ -44,10 +47,21 @@ const Sfx = () => {
           title: 'Error',
         });
       },
-    })
-  );
+    });
+    
+    howlerInstance.current = howl;
+
+    // Cleanup on unmount
+    return () => {
+      howl.unload();
+    };
+  }, []); // Empty dependency array = runs only once
+
 
   async function changeSfx(format: string, name: string, src: string) {
+    if (!howlerInstance.current) {
+      return;
+    }
     howlerInstance.current.unload();
     const howlerPromise = new Promise<void>((resolve, reject) => {
       howlerInstance.current = new Howl({
@@ -95,7 +109,11 @@ const Sfx = () => {
         </SelectContent>
       </Select>
 
-      <Button onClick={() => howlerInstance.current.play()}>
+      <Button onClick={() => {
+        if (howlerInstance.current) {
+          howlerInstance.current.play();
+        }
+      }}>
         <Play />
         Play Sound
       </Button>

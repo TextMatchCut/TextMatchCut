@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Howl } from 'howler';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Play } from 'lucide-react';
 import { Label } from './ui/label';
@@ -20,8 +20,12 @@ const Sfx = () => {
   const setConfig = useAppContext(s => s.setConfig);
   const setStatus = useAppContext(s => s.setStatus);
   const [filePath, setFilePath] = useState<string | null>(null);
-  const howlerInstance = useRef(
-    new Howl({
+
+  const howlerInstance = useRef<Howl | null>(null);
+
+  // Initialize Howl instance only once when component mounts
+  useEffect(() => {
+    const howl = new Howl({
       src: ['shutter.wav'],
       preload: true,
       onload: () => {
@@ -43,10 +47,20 @@ const Sfx = () => {
           title: 'Error',
         });
       },
-    })
-  );
+    });
+
+    howlerInstance.current = howl;
+
+    // Cleanup on unmount
+    return () => {
+      howl.unload();
+    };
+  }, []); // Empty dependency array = runs only once
 
   async function changeSfx(format: string, name: string, src: string) {
+    if (!howlerInstance.current) {
+      return;
+    }
     console.log(
       'Changing SFX to:',
       name,
@@ -110,6 +124,7 @@ const Sfx = () => {
       <Label htmlFor="sfx">Sfx</Label>
 
       <Select
+        value={config.Sfx}
         onValueChange={value => {
           setConfig(conf => ({ ...conf, Sfx: value }));
           if (value !== 'custom') changeSfx('wav', value, value);
@@ -128,7 +143,13 @@ const Sfx = () => {
         </SelectContent>
       </Select>
 
-      <Button onClick={() => howlerInstance.current.play()}>
+      <Button
+        onClick={() => {
+          if (howlerInstance.current) {
+            howlerInstance.current.play();
+          }
+        }}
+      >
         <Play />
         Play Sound
       </Button>

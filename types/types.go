@@ -82,12 +82,18 @@ type ToastConfig struct {
 type RunResponse struct {
 	Success   bool   `json:"success"`
 	Error     string `json:"error,omitempty"`
-	VideoData string `json:"videoData,omitempty"` // Will hold the Base64 video
+	VideoData string `json:"videoData,omitempty"`
 }
 
 type PickAudioFileResponse struct {
 	Success   bool   `json:"success"`
 	Error     string `json:"error,omitempty"`
-	AudioData string `json:"audioData,omitempty"` // Will hold the Base64 audio
-	Path      string `json:"path,omitempty"`      // Path to the audio file
+	AudioData string `json:"audioData,omitempty"`
+	Path      string `json:"path,omitempty"`
+}
+
+type RenderPreviewResponse struct {
+	Success   bool   `json:"success"`
+	Error     string `json:"error,omitempty"`
+	FrameData string `json:"frameData,omitempty"`
 }

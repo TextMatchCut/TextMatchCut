@@ -1,7 +1,7 @@
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Run } from '../wailsjs/go/main/App';
+import { Run, RenderPreview } from '../wailsjs/go/main/App';
 import { fetchFile } from '@ffmpeg/util';
 import {
   Card,
@@ -12,8 +12,9 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { actionStandalone } from '@/lib/action';
 
-import { Loader2Icon } from 'lucide-react';
+import { ArrowUp, Loader2Icon } from 'lucide-react';
 import useAppContext from '@/store';
 import clsx from 'clsx';
 import 'react-photo-view/dist/react-photo-view.css';
@@ -34,6 +35,7 @@ const MainView = () => {
     elapsedTime,
     status,
     ffmpeg,
+    setProgress,
   } = useAppContext(s => s);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const messageRef = useRef<HTMLParagraphElement | null>(null);
@@ -77,7 +79,21 @@ const MainView = () => {
   //   }
   // }
 
-  async function renderFrame(i: number, input: any, write: boolean = true) {
+  async function renderFrame(input: any) {
+    console.log('Rendering frame with input:', input);
+    const res = await RenderPreview(input);
+
+    if (!res.success) {
+      return toast({
+        title: 'Error',
+        message: res.error || 'Failed to render preview',
+        type: 'error',
+      });
+    }
+    setPreview(`data:image/png;base64,${res.frameData!}`);
+  }
+
+  async function renderFrameWeb(i: number, input: any, write: boolean = true) {
     const frame = `/vid/frame-${i + 1}.png`;
     console.log({ input });
     const base64String = (window as any).GenerateFrameFromJSON(
@@ -94,9 +110,34 @@ const MainView = () => {
     console.log('Image frame rendered:', i + 1);
     return { frame, url: `data:image/png;base64,${base64String}` };
   }
+
   async function renderPreview() {
-    setOpenDrawer(true);
-    setStatus('processing');
+    if (preview) {
+      URL.revokeObjectURL(preview);
+      setPreview(undefined);
+    }
+    try {
+      // const input = {
+      //   frameNum: 1,
+      //   config,
+      //   aiSnippets: getDummySnippets(),
+      //   fontFiles: ['embedded'], // Use the embedded font
+      //   highlightRadius: 400.0,
+      //   totalFrames: 1,
+      // };
+      await renderFrame(config);
+    } catch (err) {
+      setStatus('error');
+      toast({
+        title: 'Error',
+        message: 'Failed to render preview',
+        type: 'error',
+      });
+      console.error('Error calling renderFrame:', err);
+    }
+  }
+
+  async function renderPreviewWeb() {
     if (preview) {
       URL.revokeObjectURL(preview);
       setPreview(undefined);
@@ -111,9 +152,8 @@ const MainView = () => {
         highlightRadius: 400.0,
         totalFrames: 1,
       };
-      const { frame, url } = await renderFrame(0, input, false);
+      const { frame, url } = await renderFrameWeb(0, input, false);
       setPreview(url);
-      setStatus('ready');
     } catch (err) {
       setStatus('error');
       toast({
@@ -121,7 +161,7 @@ const MainView = () => {
         message: 'Failed to render preview',
         type: 'error',
       });
-      console.error('Error calling WASM function:', err);
+      console.error('Error calling renderFrame:', err);
     }
   }
   async function renderVideoWeb() {
@@ -129,7 +169,6 @@ const MainView = () => {
     //   console.error('WASM is not ready yet.');
     //   return;
     // }
-    setOpenDrawer(true);
 
     try {
       const time = new Date().getTime();
@@ -163,7 +202,7 @@ const MainView = () => {
         try {
           input.frameNum = i + 1; // Update frame number
           // 3. Display the resulting image
-          const { frame, url } = await renderFrame(i, input);
+          const { frame, url } = await renderFrameWeb(i, input);
           frames[frame] = url;
         } catch (err) {
           console.error('Error calling WASM function:', err);
@@ -214,7 +253,6 @@ const MainView = () => {
   }
 
   async function renderVideo() {
-    setOpenDrawer(true);
     Run(config)
       .then(async res => {
         console.log('WASM function executed successfully:', res);
@@ -246,12 +284,17 @@ const MainView = () => {
           <ConfigForm />
         </CardContent>
 
-        <CardFooter>
+        <CardFooter className="m-auto flex gap-4">
           <Button
             variant="outline"
             className="max-w-sm"
             disabled={loading}
-            onClick={__DESKTOP__ ? renderVideo : renderVideoWeb}
+            onClick={
+              __DESKTOP__
+                ? actionStandalone(renderVideo)
+                : actionStandalone(renderVideoWeb)
+            }
+            // onClick={__DESKTOP__ ? renderVideo : renderVideoWeb}
           >
             <Loader2Icon
               className={clsx('animate-spin', {
@@ -266,7 +309,11 @@ const MainView = () => {
             className="max-w-sm"
             title="Renders the first frame of the video"
             disabled={loading}
-            onClick={renderPreview}
+            onClick={
+              __DESKTOP__
+                ? actionStandalone(renderPreview)
+                : actionStandalone(renderPreviewWeb)
+            }
           >
             <Loader2Icon
               className={clsx('animate-spin', {
@@ -282,12 +329,8 @@ const MainView = () => {
             disabled={loading}
             onClick={() => setOpenDrawer(!openDrawer)}
           >
-            <Loader2Icon
-              className={clsx('animate-spin', {
-                hidden: !loading,
-              })}
-            />
-            Expand Drawer
+            <ArrowUp />
+            Open Drawer
           </Button>
           <div>
             <p ref={messageRef} className="text-sm text-muted-foreground">
@@ -295,35 +338,47 @@ const MainView = () => {
                 ? 'Loading...'
                 : status === 'error'
                 ? 'Error occurred while rendering.'
-                : 'Ready to render.'}
+                : null}
             </p>
           </div>
         </CardFooter>
       </Card>
       <Drawer>
         <PhotoProvider>
-          {preview ? (
-            <div className="m-auto">
-              <h2 className="text-center text-lg font-semibold mb-4">
-                Preview
-              </h2>
+          <div className="m-auto">
+            {!preview && !videoSrc ? (
+              <>
+                <h2 className="text-center text-lg font-semibold mb-4">
+                  Nothing to see here
+                </h2>
+                <p className="text-center text-sm text-muted-foreground">
+                  Render a preview or video to see the results here.
+                </p>
+              </>
+            ) : null}
+            {preview ? (
+              <>
+                <h2 className="text-center text-lg font-semibold mb-4">
+                  Preview
+                </h2>
 
-              <PhotoView src={preview}>
-                <img src={preview} alt="Preview" />
-              </PhotoView>
+                <PhotoView src={preview}>
+                  <img src={preview} alt="Preview" />
+                </PhotoView>
 
-              <Button onClick={__DESKTOP__ ? renderVideo : renderVideoWeb}>
-                Render Video
-              </Button>
-            </div>
-          ) : null}
-          {videoSrc ? (
-            <video
-              controls
-              style={{ maxWidth: '100%', height: 'auto' }}
-              src={videoSrc || undefined}
-            ></video>
-          ) : null}
+                <Button onClick={__DESKTOP__ ? renderVideo : renderVideoWeb}>
+                  Render Video
+                </Button>
+              </>
+            ) : null}
+            {videoSrc ? (
+              <video
+                controls
+                style={{ maxWidth: '100%', height: 'auto' }}
+                src={videoSrc || undefined}
+              ></video>
+            ) : null}
+          </div>
         </PhotoProvider>
       </Drawer>
     </>

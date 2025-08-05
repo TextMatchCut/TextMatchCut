@@ -1,10 +1,13 @@
 import { cn } from '@/lib/utils';
 import useAppContext from '@/store';
 import React, { useEffect } from 'react';
+import { Progress } from '@/components/ui/progress';
 
 const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
   const setOpenDrawer = useAppContext(s => s.setOpenDrawer);
   const openDrawer = useAppContext(s => s.openDrawer);
+  const progress = useAppContext(s => s.progress);
+  const status = useAppContext(s => s.status);
   //   useEffect(() => {
   //     const handleKeyDown = (event: KeyboardEvent) => {
   //       if (event.key === 'Escape') {
@@ -38,6 +41,13 @@ const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
           borderTopRightRadius: '1rem',
         }}
       >
+        <Progress
+          className={cn('w-full h-[2px] absolute top-0 left-0', {
+            hidden: status !== 'processing',
+          })}
+          value={progress}
+        />
+
         <div className="w-full h-full max-w-sm p-4">{children}</div>
       </div>
     </div>

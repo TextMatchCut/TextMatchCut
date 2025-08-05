@@ -19,34 +19,6 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
   const config = useAppContext(s => s.config);
   return (
     <>
-      <div className="flex items-center justify-between space-x-2">
-        <Label htmlFor="blur-type">Blur Type</Label>
-        <Select
-          defaultValue={BlurType.Horizontal}
-          onValueChange={value => {
-            setConfig({
-              ...config,
-              BlurType: value as BlurType,
-            });
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Blur Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.keys(BlurType).map(type => (
-              <SelectItem
-                key={type}
-                value={BlurType[type as keyof typeof BlurType]}
-              >
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <WidthHeight />
       <div>
         <Label htmlFor="highlighted-text">Highlighted Text</Label>
         <Input
@@ -137,7 +109,7 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           onChange={e =>
             setConfig({
               ...config,
-              MinLines: parseInt(e.target.value, 10),
+              MinLines: parseInt(e.target.value),
             })
           }
         />
@@ -151,7 +123,7 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           onChange={e =>
             setConfig({
               ...config,
-              MaxLines: parseInt(e.target.value, 10),
+              MaxLines: parseInt(e.target.value),
             })
           }
         />
@@ -184,6 +156,37 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           }
         />
       </div>
+      <div>
+        <Label htmlFor="blur-type">Blur Type</Label>
+        <div className="flex items-center justify-between space-x-2">
+          <Select
+            defaultValue={BlurType.Horizontal}
+            onValueChange={value => {
+              setConfig({
+                ...config,
+                BlurType: value as BlurType,
+              });
+            }}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Blur Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(BlurType).map(type => (
+                <SelectItem
+                  key={type}
+                  value={BlurType[type as keyof typeof BlurType]}
+                >
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <WidthHeight />
+
       {__DESKTOP__ ? <Sfx /> : <SfxWeb />}
 
       {children}

@@ -50,7 +50,8 @@ const WidthHeight = () => {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="width-height">Resolution</Label>
       <div className="flex items-center justify-between space-x-2">
         <Select
           value={custom ? 'custom' : `${config.Width}x${config.Height}`}
@@ -90,7 +91,7 @@ const WidthHeight = () => {
           onChange={setHeight}
         />
       </div>
-    </>
+    </div>
   );
 };
 

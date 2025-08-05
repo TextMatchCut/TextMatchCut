@@ -6,6 +6,10 @@ export function PickAudioFile() {
   return window['go']['main']['App']['PickAudioFile']();
 }
 
+export function RenderPreview(arg1) {
+  return window['go']['main']['App']['RenderPreview'](arg1);
+}
+
 export function Run(arg1) {
   return window['go']['main']['App']['Run'](arg1);
 }

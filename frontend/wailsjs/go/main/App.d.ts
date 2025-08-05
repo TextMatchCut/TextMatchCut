@@ -4,6 +4,8 @@ import {types} from '../models';
 
 export function PickAudioFile():Promise<types.PickAudioFileResponse>;
 
+export function RenderPreview(arg1:types.Config):Promise<types.RenderPreviewResponse>;
+
 export function Run(arg1:types.Config):Promise<types.RunResponse>;
 
 export function Toast(arg1:types.ToastConfig):Promise<void>;

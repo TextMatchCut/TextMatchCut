@@ -42,36 +42,7 @@ func (a *App) Run(config types.Config) types.RunResponse {
 	dev := false
 
 	if dev {
-		data, err := os.ReadFile("dummy.json")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading dummy.json: %v\n", err)
-			os.Exit(1)
-		}
-		if config.Verbose {
-			fmt.Printf("Parsed configuration: %+v\n", config)
-		}
-		fmt.Printf("Dummy data looks like this: %s\n", string(data))
-		var snippets []types.AITextSnippets
-		json.Unmarshal(data, &snippets)
-
-		//convert AI snippets to TextSnippet format
-		aiSnippets := make([]types.TextSnippet, len(snippets))
-		for i, snippet := range snippets {
-			lines := strings.Split(snippet.Text, ".")
-			highlightIndex := -1
-			for j, line := range lines {
-				if strings.Contains(line, config.HighlightedText) {
-					highlightIndex = j
-					break
-				}
-			}
-			aiSnippets[i] = types.TextSnippet{
-				Lines:          lines,
-				HighlightIndex: highlightIndex,
-			}
-		}
-
-		outputPath, err := generateFrames(config, aiSnippets)
+		outputPath, err := generateFrames(config, getDummySnippets(config))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return types.RunResponse{Success: false, Error: err.Error()}
@@ -115,6 +86,42 @@ func (a *App) Run(config types.Config) types.RunResponse {
 
 	// Success
 	return types.RunResponse{Success: true, VideoData: videoData}
+}
+
+func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
+	// config looks like this:
+	fmt.Printf("%+v\n", config)
+	finalImage, err := core.GenerateFrame(1, config, getDummySnippets(config), []string{
+		"embedded",
+	},
+		// TODO: need to work on this
+		float64(config.FontSize*len(config.HighlightedText)),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating preview: %v\n", err)
+		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
+	}
+	tmp_file := filepath.Join(os.TempDir(), "preview"+generateUniqueFilename("", "png"))
+	file, err := os.Create(tmp_file)
+	if err != nil {
+		return types.RenderPreviewResponse{Success: false, Error: fmt.Sprintf("Error creating preview file: %v", err)}
+	}
+	defer file.Close()
+
+	err = png.Encode(file, finalImage)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading preview file: %v\n", err)
+		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
+	}
+
+	fData, err := os.ReadFile(tmp_file)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading preview file: %v\n", err)
+		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
+	}
+	frameData := base64.StdEncoding.EncodeToString(fData)
+	// Do something with finalImage
+	return types.RenderPreviewResponse{Success: true, FrameData: frameData}
 }
 
 func (a *App) PickAudioFile() types.PickAudioFileResponse {
@@ -184,27 +191,31 @@ func (a *App) Toast(toastConfig types.ToastConfig) {
 	switch toastConfig.Type {
 	case "info":
 		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-			Title:   toastConfig.Title,
-			Message: toastConfig.Message,
-			Buttons: []string{"OK"},
+			Title:         toastConfig.Title,
+			Message:       toastConfig.Message,
+			Buttons:       []string{"OK"},
+			DefaultButton: "OK",
 		})
 	case "warning":
 		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-			Title:   toastConfig.Title,
-			Message: toastConfig.Message,
-			Buttons: []string{"OK"},
+			Title:         toastConfig.Title,
+			Message:       toastConfig.Message,
+			Buttons:       []string{"OK"},
+			DefaultButton: "OK",
 		})
 	case "error":
 		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-			Title:   toastConfig.Title,
-			Message: toastConfig.Message,
-			Buttons: []string{"OK"},
+			Title:         toastConfig.Title,
+			Message:       toastConfig.Message,
+			Buttons:       []string{"OK"},
+			DefaultButton: "OK",
 		})
 	default:
 		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-			Title:   toastConfig.Title,
-			Message: toastConfig.Message,
-			Buttons: []string{"OK"},
+			Title:         toastConfig.Title,
+			Message:       toastConfig.Message,
+			Buttons:       []string{"OK"},
+			DefaultButton: "OK",
 		})
 	}
 
@@ -437,4 +448,37 @@ func findFontFiles(fontDir string) ([]string, error) {
 	}
 
 	return fontFiles, nil
+}
+
+func getDummySnippets(config types.Config) []types.TextSnippet {
+	data, err := os.ReadFile("dummy.json")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading dummy.json: %v\n", err)
+		os.Exit(1)
+	}
+	if config.Verbose {
+		fmt.Printf("Parsed configuration: %+v\n", config)
+	}
+	fmt.Printf("Dummy data looks like this: %s\n", string(data))
+	var snippets []types.AITextSnippets
+	json.Unmarshal(data, &snippets)
+
+	//convert AI snippets to TextSnippet format
+	aiSnippets := make([]types.TextSnippet, len(snippets))
+	for i, snippet := range snippets {
+		lines := strings.Split(snippet.Text, ".")
+		highlightIndex := -1
+		for j, line := range lines {
+			if strings.Contains(line, config.HighlightedText) {
+				highlightIndex = j
+				break
+			}
+		}
+		aiSnippets[i] = types.TextSnippet{
+			Lines:          lines,
+			HighlightIndex: highlightIndex,
+		}
+	}
+
+	return aiSnippets
 }
