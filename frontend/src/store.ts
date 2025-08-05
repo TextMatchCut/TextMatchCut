@@ -1,37 +1,46 @@
 import { create } from 'zustand';
 import { DEFAULT_CONFIG } from '@constants';
-import { BlurType, Config } from '@types';
+import { BlurType, Config, Status } from '@types';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+
+type SetConfig = Config | ((config: Config) => Config);
 
 const useAppContext = create<{
-  isLoading: boolean;
-  isWasmBackendLoading: boolean;
-  isFfmpegLoading: boolean;
-  isFfmpegError: string | null;
-  isWasmBackendError: string | null;
   blurType: BlurType;
   config: Config;
-  setIsWasmBackendError: (error: string) => void;
-  setIsFfmpegError: (error: string) => void;
-  setIsLoading: (loading: boolean) => void;
-  setIsWasmBackendLoading: (loading: boolean) => void;
-  setIsFfmpegLoading: (loading: boolean) => void;
-  setConfig: (config: Config) => void;
+  status: Status;
+  ffmpeg: FFmpeg;
+  elapsedTime: number;
+  openDrawer: boolean;
+  setConfig: (config: SetConfig) => void;
+  setStatus: (status: Status) => void;
+  setElapsedTime: (elapsedTime: number) => void;
+  setOpenDrawer: (openDrawer: boolean) => void;
 }>(set => ({
-  isLoading: true,
-  isWasmBackendLoading: true,
-  isFfmpegLoading: true,
-  isFfmpegError: null,
-  isWasmBackendError: null,
   blurType: BlurType.Horizontal,
   config: DEFAULT_CONFIG,
-  setIsWasmBackendError: (error: string) => set({ isWasmBackendError: error }),
-  setIsFfmpegError: (error: string) => set({ isFfmpegError: error }),
-  setIsLoading: (loading: boolean) => set({ isLoading: loading }),
-  setIsWasmBackendLoading: (loading: boolean) =>
-    set({ isWasmBackendLoading: loading }),
-  setIsFfmpegLoading: (loading: boolean) => set({ isFfmpegLoading: loading }),
+  status: 'loading',
+  elapsedTime: 0,
+  // openDrawer: false,
+  openDrawer: true,
+  ffmpeg: new FFmpeg(),
   setBlurType: (blurType: BlurType) => set({ blurType }),
-  setConfig: (config: Config) => set({ config }),
+  // TODO : ?
+  setConfig: (config: SetConfig) => {
+    if (typeof config === 'object') {
+      return set({ config: { ...config } });
+    }
+
+    set(state => ({
+      config: {
+        ...state.config,
+        ...config(state.config),
+      },
+    }));
+  },
+  setStatus: (status: Status) => set({ status }),
+  setElapsedTime: (elapsedTime: number) => set({ elapsedTime }),
+  setOpenDrawer: (openDrawer: boolean) => set({ openDrawer }),
 }));
 
 export default useAppContext;

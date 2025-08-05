@@ -1,8 +1,11 @@
 package main
 
 import (
-	"TextMatchCut/lib"
+	"TextMatchCut/core"
+	"TextMatchCut/lib/gemini"
+	"TextMatchCut/types"
 	"context"
+	"encoding/base64" // <-- Import base64
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -16,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/genai"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
@@ -35,36 +38,8 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
-}
-
-func (a *App) Run() {
+func (a *App) Run(config types.Config) types.RunResponse {
 	dev := false
-	// go run main.go -text="Web Dev" -width=1920 -height=1080 -duration=2 -fps=4 -font-size=80 -min-lines=5 -max-lines=12 -output="epic.mp4" -blur-type=gaussian -blur-radius=1.5  -sfx shutter.wav -blur-type=directional -blur-radius=40
-	config := lib.Config{
-		Width:           1920,
-		Height:          1080,
-		FPS:             4,
-		Duration:        2,
-		HighlightedText: "Web Dev",
-		HighlightColor:  "yellow",
-		TextColor:       "black",
-		BackgroundColor: "white",
-		BlurType:        "gaussian",
-		// BlurRadius:      1.5,
-		BlurRadius:      40,
-		FontSize:        80,
-		MinLines:        5,
-		MaxLines:        12,
-		OutputPath:      "epic.mp4",
-		AIEnabled:       true,
-		Verbose:         false,
-		FontDir:         "",
-		SoundEffectPath: "shutter.wav",
-		VerticalSpread:  1.5,
-	}
 
 	if dev {
 		data, err := os.ReadFile("dummy.json")
@@ -76,11 +51,11 @@ func (a *App) Run() {
 			fmt.Printf("Parsed configuration: %+v\n", config)
 		}
 		fmt.Printf("Dummy data looks like this: %s\n", string(data))
-		var snippets []lib.AITextSnippets
+		var snippets []types.AITextSnippets
 		json.Unmarshal(data, &snippets)
 
 		//convert AI snippets to TextSnippet format
-		aiSnippets := make([]lib.TextSnippet, len(snippets))
+		aiSnippets := make([]types.TextSnippet, len(snippets))
 		for i, snippet := range snippets {
 			lines := strings.Split(snippet.Text, ".")
 			highlightIndex := -1
@@ -90,19 +65,20 @@ func (a *App) Run() {
 					break
 				}
 			}
-			aiSnippets[i] = lib.TextSnippet{
+			aiSnippets[i] = types.TextSnippet{
 				Lines:          lines,
 				HighlightIndex: highlightIndex,
 			}
 		}
 
-		// Generate video
-		err = generateFrames(config, aiSnippets)
+		outputPath, err := generateFrames(config, aiSnippets)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return types.RunResponse{Success: false, Error: err.Error()}
+			// os.Exit(1)
 		}
-		return
+
+		return types.RunResponse{Success: true, VideoData: outputPath}
 	}
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	fmt.Println("GEMINI_API_KEY:", apiKey)
@@ -112,28 +88,14 @@ func (a *App) Run() {
 	// Initialize random seed
 	rand.Seed(time.Now().UnixNano())
 
-	// Parse command line arguments
-	ctx := context.Background()
-	client, err := genai.NewClient(ctx, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
 	//get env for GEMINI_API_KEY
-
-	geminiConfig := &genai.GenerateContentConfig{
-		ResponseMIMEType: "application/json",
-		ResponseSchema: &genai.Schema{
-			Type: genai.TypeArray,
-			Items: &genai.Schema{
-				Type: genai.TypeObject,
-				Properties: map[string]*genai.Schema{
-					"text": {Type: genai.TypeString},
-				},
-			},
-		},
+	aiSnippets, err := gemini.GetSnippets(context.Background(), apiKey, config)
+	// Check if FFmpeg is available
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 
-	// Check if FFmpeg is available
 	_, err = exec.LookPath("ffmpeg")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: FFmpeg not found in PATH. Please install FFmpeg.\n")
@@ -145,43 +107,122 @@ func (a *App) Run() {
 		config.FontSize = int(float64(config.Height) * 0.05)
 	}
 
-	prompt := fmt.Sprintf("Respond with 5 different text snippets with the highlighted text '%s'. Each snippet should have between %d and %d lines.  Make sure that the highlighted text is not always at the start but random", config.HighlightedText, config.MinLines, config.MaxLines)
-	log.Printf("Prompt for AI: %s\n", prompt)
-	result, err := client.Models.GenerateContent(
-		ctx,
-		"gemini-2.5-flash",
-		genai.Text(prompt),
-		geminiConfig,
-	)
+	videoData, err := generateFrames(config, aiSnippets)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return types.RunResponse{Success: false, Error: err.Error()}
 	}
-	fmt.Println(result.Text())
-	var snippets []lib.AITextSnippets
-	json.Unmarshal([]byte(result.Text()), &snippets)
-	//convert AI snippets to TextSnippet format
-	aiSnippets := make([]lib.TextSnippet, len(snippets))
-	for i, snippet := range snippets {
-		lines := strings.Split(snippet.Text, ".")
-		highlightIndex := -1
-		for j, line := range lines {
-			if strings.Contains(line, config.HighlightedText) {
-				highlightIndex = j
-				break
-			}
-		}
-		aiSnippets[i] = lib.TextSnippet{
-			Lines:          lines,
-			HighlightIndex: highlightIndex,
+
+	// Success
+	return types.RunResponse{Success: true, VideoData: videoData}
+}
+
+func (a *App) PickAudioFile() types.PickAudioFileResponse {
+	file, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:           "Select an audio file",
+		ShowHiddenFiles: true,
+		Filters: []runtime.FileFilter{
+			{Pattern: "*.wav", DisplayName: "WAV Files"},
+			{Pattern: "*.mp3", DisplayName: "MP3 Files"},
+			{Pattern: "*.ogg", DisplayName: "OGG Files"},
+			{Pattern: "*.flac", DisplayName: "FLAC Files"},
+			{Pattern: "*.aac", DisplayName: "AAC Files"},
+			{Pattern: "*.m4a", DisplayName: "M4A Files"},
+		},
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error opening file dialog: %v\n", err)
+		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+			Title:   "Error",
+			Message: err.Error(),
+			Buttons: []string{"OK"},
+		})
+		return types.PickAudioFileResponse{
+			Success:   false,
+			Error:     err.Error(),
+			AudioData: "",
 		}
 	}
 
-	// Generate video
-	err = generateFrames(config, aiSnippets)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+	if file == "" {
+		fmt.Println("No file selected")
+		return types.PickAudioFileResponse{
+			Success:   false,
+			Error:     "No file selected",
+			AudioData: "",
+		}
 	}
+
+	fmt.Printf("Selected file: %s\n", file)
+	f, err := os.ReadFile(file)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
+		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+			Title:   "Error",
+			Message: err.Error(),
+			Buttons: []string{"OK"},
+		})
+		return types.PickAudioFileResponse{
+			Success:   false,
+			Error:     err.Error(),
+			AudioData: "",
+		}
+	}
+
+	base64String := base64.StdEncoding.EncodeToString(f)
+	return types.PickAudioFileResponse{
+		Success:   true,
+		AudioData: base64String,
+		Error:     "",
+		Path:      file, // Return the path to the audio file
+	}
+
+}
+
+func (a *App) Toast(toastConfig types.ToastConfig) {
+
+	switch toastConfig.Type {
+	case "info":
+		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+			Title:   toastConfig.Title,
+			Message: toastConfig.Message,
+			Buttons: []string{"OK"},
+		})
+	case "warning":
+		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+			Title:   toastConfig.Title,
+			Message: toastConfig.Message,
+			Buttons: []string{"OK"},
+		})
+	case "error":
+		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+			Title:   toastConfig.Title,
+			Message: toastConfig.Message,
+			Buttons: []string{"OK"},
+		})
+	default:
+		runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+			Title:   toastConfig.Title,
+			Message: toastConfig.Message,
+			Buttons: []string{"OK"},
+		})
+	}
+
+	// selection, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+	// 	Title:         toastConfig.Title,
+	// 	Message:       toastConfig.Message,
+	// 	Buttons:       []string{"one", "two", "three", "four"},
+	// 	DefaultButton: "two",
+	// 	CancelButton:  "three",
+	// })
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "Error showing message dialog: %v\n", err)
+	// 	return
+	// }
+	// if selection == "" {
+	// 	fmt.Println("No selection made")
+	// 	return
+	// }
 }
 
 // Generate unique filename
@@ -191,8 +232,8 @@ func generateUniqueFilename(prefix, extension string) string {
 	return fmt.Sprintf("%s_%s.%s", prefix, hex.EncodeToString(bytes), extension)
 }
 
-// Generate video frames
-func generateFrames(config lib.Config, aiSnippets []lib.TextSnippet) error {
+// Generate video frames and return base64 data
+func generateFrames(config types.Config, aiSnippets []types.TextSnippet) (string, error) {
 	if config.Verbose {
 		fmt.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
@@ -201,7 +242,7 @@ func generateFrames(config lib.Config, aiSnippets []lib.TextSnippet) error {
 	// Find fonts
 	fontFiles, err := findFontFiles(config.FontDir)
 	if err != nil {
-		return fmt.Errorf("failed to find fonts: %v", err)
+		return "", fmt.Errorf("failed to find fonts: %v", err)
 	}
 
 	if config.Verbose {
@@ -226,7 +267,7 @@ func generateFrames(config lib.Config, aiSnippets []lib.TextSnippet) error {
 	tempDir := filepath.Join(os.TempDir(), "textmatchcut_frames_"+generateUniqueFilename("", ""))
 	err = os.MkdirAll(tempDir, 0755)
 	if err != nil {
-		return fmt.Errorf("failed to create temp directory: %v", err)
+		return "", fmt.Errorf("failed to create temp directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -240,24 +281,34 @@ func generateFrames(config lib.Config, aiSnippets []lib.TextSnippet) error {
 		fmt.Printf("Highlight radius: %.2f\n", highlightRadius)
 	}
 
+	tempDir = filepath.Join(os.TempDir(), "textmatchcut_frames_"+generateUniqueFilename("", ""))
+	err = os.MkdirAll(tempDir, 0755)
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
 	// Generate frames
 	for frameNum := 0; frameNum < totalFrames; frameNum++ {
 		// Select random snippet and font
-		finalImage, err := lib.GenerateFrame(frameNum, config, aiSnippets, fontFiles, highlightRadius, tempDir, totalFrames)
+		finalImage, err := core.GenerateFrame(frameNum, config, aiSnippets, fontFiles, highlightRadius)
+
+		os.Create(filepath.Join(tempDir, fmt.Sprintf("frame_%05d.png", frameNum)))
+
 		if err != nil {
-			return fmt.Errorf("failed to generate frame %d: %v", frameNum, err)
+			return "", fmt.Errorf("failed to generate frame %d: %v", frameNum, err)
 		}
 		// Save frame
 		framePath := filepath.Join(tempDir, fmt.Sprintf("frame_%05d.png", frameNum))
 		file, err := os.Create(framePath)
 		if err != nil {
-			return fmt.Errorf("failed to create frame file: %v", err)
+			return "", fmt.Errorf("failed to create frame file: %v", err)
 		}
 
 		err = png.Encode(file, finalImage)
 		file.Close()
 		if err != nil {
-			return fmt.Errorf("failed to encode frame: %v", err)
+			return "", fmt.Errorf("failed to encode frame: %v", err)
 		}
 
 		// Progress update
@@ -271,10 +322,11 @@ func generateFrames(config lib.Config, aiSnippets []lib.TextSnippet) error {
 	}
 
 	// Create video using FFmpeg
-	outputPath := config.OutputPath
-	if outputPath == "" {
-		outputPath = generateUniqueFilename("text_match_cut", "mp4")
-	}
+	outputPath := filepath.Join(os.TempDir(), generateUniqueFilename("text_match_cut_", "mp4"))
+	// outputPath := config.OutputPath
+	// if outputPath == "" {
+	// 	outputPath = generateUniqueFilename("text_match_cut", "mp4")
+	// }
 
 	var cmd *exec.Cmd
 	if config.SoundEffectPath != "" {
@@ -300,7 +352,8 @@ func generateFrames(config lib.Config, aiSnippets []lib.TextSnippet) error {
 				"-y", // Overwrite output file
 				"-framerate", strconv.Itoa(config.FPS),
 				"-i", filepath.Join(tempDir, "frame_%05d.png"), // Video input
-				"-i", config.SoundEffectPath, // Audio input
+				// "-i", config.SoundEffectPath, // Audio input
+				"-i", "shutter.wav", // Audio input
 				"-filter_complex", filterComplex,
 				"-map", "0:v", // Map video from first input
 				"-map", "[a]", // Map audio from filtergraph
@@ -336,11 +389,23 @@ func generateFrames(config lib.Config, aiSnippets []lib.TextSnippet) error {
 
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("ffmpeg failed: %v", err)
+		return "", fmt.Errorf("ffmpeg failed: %v", err)
 	}
 
 	fmt.Printf("Video created successfully: %s\n", outputPath)
-	return nil
+
+	// --- NEW LOGIC ---
+	// 1. Read the generated file into a byte slice
+	fileBytes, err := os.ReadFile(outputPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read generated video file: %v", err)
+	}
+
+	// 2. Encode the byte slice to a Base64 string
+	base64String := base64.StdEncoding.EncodeToString(fileBytes)
+
+	// 3. Return the base64 string instead of the path
+	return base64String, nil
 }
 
 // Find font files in directory

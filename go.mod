@@ -22,7 +22,6 @@ require (
 )
 
 require (
-	github.com/anthonynsimon/bild v0.14.0
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/fogleman/gg v1.3.0
 	github.com/go-ole/go-ole v1.3.0 // indirect

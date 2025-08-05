@@ -1,12 +1,27 @@
-import { BlurType } from '@types';
+import { BlurType, Config } from '@types';
 
 export const DEFAULT_WIDTH = 1920;
 export const DEFAULT_HEIGHT = 1080;
 export const DEFAULT_FPS = 3;
 export const DEFAULT_HIGHLIGHTED_TEXT = 'Web Dev';
-export const DEFAULT_HIGHLIGHT_COLOR = 'yellow';
-export const DEFAULT_TEXT_COLOR = 'black';
-export const DEFAULT_BACKGROUND_COLOR = 'white';
+export const DEFAULT_HIGHLIGHT_COLOR = [255, 255, 0, 255] as [
+  number,
+  number,
+  number,
+  number
+]; // yellow - RGBA format
+export const DEFAULT_TEXT_COLOR = [0, 0, 0, 255] as [
+  number,
+  number,
+  number,
+  number
+]; // black - RGBA format
+export const DEFAULT_BACKGROUND_COLOR = [255, 255, 255, 255] as [
+  number,
+  number,
+  number,
+  number
+]; // white - RGBA format
 export const DEFAULT_BLUR_TYPE = BlurType.Horizontal;
 export const DEFAULT_BLUR_ANGLE = 45.0;
 export const DEFAULT_BLUR_RADIUS = 5.0;
@@ -32,4 +47,11 @@ export const DEFAULT_CONFIG = {
   MaxLines: DEFAULT_MAX_LINES,
   VerticalSpread: DEFAULT_VERTICAL_SPREAD,
   Feather: DEFAULT_FEATHER,
-};
+  OutputPath: '',
+  FontDir: '',
+  AIEnabled: false,
+  Verbose: false,
+  SoundEffectPath: '',
+  Duration: 2,
+  Sfx: 'shutter.wav',
+} as Config;

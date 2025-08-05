@@ -35,11 +35,22 @@ const watchGoLibPlugin = () => {
       // 1. Initial build when the server starts
       await buildWasm();
 
-      // 2. Set up the watcher
+      // 2. Set up the watcher - try these alternatives
+      // Option A: Watch the entire lib directory
+      server.watcher.add(path.resolve(__dirname, '../lib'));
+
+      // Option B: Use explicit glob patterns
       server.watcher.add(path.resolve(__dirname, '../lib/**/*.go'));
+
+      // Option C: Add multiple specific patterns
+      server.watcher.add([
+        path.resolve(__dirname, '../lib/*.go'),
+        path.resolve(__dirname, '../lib/**/*.go'),
+      ]);
 
       // 3. Listen for 'change' events on the watched files
       server.watcher.on('change', async file => {
+        console.log(file);
         if (file.endsWith('.go')) {
           console.log(`Go file changed: ${file}. Recompiling WASM...`);
           try {
@@ -59,26 +70,31 @@ const watchGoLibPlugin = () => {
 };
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    watchGoLibPlugin(), // Add the custom plugin here
-  ],
-  optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-  },
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+export default defineConfig(({ mode }) => {
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      watchGoLibPlugin(), // Add the custom plugin here
+    ],
+    optimizeDeps: {
+      exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
     },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@constants': path.resolve(__dirname, './constants.ts'),
-      '@types': path.resolve(__dirname, './types.ts'),
+    define: {
+      __DESKTOP__: mode === 'wails' ? 'true' : 'false',
     },
-  },
+    server: {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+      },
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        '@constants': path.resolve(__dirname, './constants.ts'),
+        '@types': path.resolve(__dirname, './types.ts'),
+      },
+    },
+  };
 });

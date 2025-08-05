@@ -3,8 +3,8 @@
   "name": "TextMatchCut",
   "outputfilename": "TextMatchCut",
   "frontend:install": "bun install",
-  "frontend:build": "bun run build",
-  "frontend:dev:watcher": "bun run dev",
+  "frontend:build": "bun run build:wails",
+  "frontend:dev:watcher": "bun run dev:wails",
   "frontend:dev:serverUrl": "auto",
   "author": {
     "name": "Uncore",
