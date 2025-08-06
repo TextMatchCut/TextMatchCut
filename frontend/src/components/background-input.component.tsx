@@ -55,7 +55,7 @@ const BackgroundInput = () => {
   }, []);
 
   return (
-    <div className="flex w-[40%] max-w-sm flex-col ">
+    <div className="flex w-[40%] max-w-sm flex-col">
       <Label className="mb-2">Background</Label>
       <Tabs
         defaultValue="image"

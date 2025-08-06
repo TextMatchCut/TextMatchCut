@@ -114,3 +114,25 @@ export const loadFFmpeg = async (ffmpeg: FFmpeg) => {
   });
   console.log('FFmpeg loaded successfully');
 };
+
+export const readAsRawBase64 = (f: File | undefined) => {
+  return new Promise<{ raw: string; normal: string } | undefined>(
+    (resolve, reject) => {
+      if (!f) {
+        resolve(undefined);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        //removes text like data:font/woff2;base64 from string
+        resolve({ raw: base64.split(',')[1], normal: base64 });
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsDataURL(f);
+    }
+  );
+};
