@@ -309,7 +309,7 @@ const MainView = () => {
             output.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 grid-cols-1 sm:grid-cols-2 max-w-lg m-auto">
+        <CardContent className="flex flex-col gap-2 max-w-lg m-auto">
           <ConfigForm />
         </CardContent>
 

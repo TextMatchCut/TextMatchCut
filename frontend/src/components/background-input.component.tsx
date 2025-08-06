@@ -48,7 +48,7 @@ const BackgroundInput = () => {
                 src={src} // Fallback to a default image if no file is selected
                 alt="Background Preview"
                 className={cn({
-                  'w-full h-auto mt-2 rounded-lg': true,
+                  'max-w-[20%] h-auto mt-2 rounded-lg': true,
                   hidden: !src,
                 })}
               />

@@ -11,7 +11,7 @@ function App() {
   return (
     <div className="w-full flex flex-col h-screen ">
       {!__DESKTOP__ ? <Header /> : null}
-      <div className="w-full h-full relative overflow-scroll">
+      <div className="w-full h-full relative">
         <MainView />
       </div>
       {__DESKTOP__ ? <StatusBar /> : null}
