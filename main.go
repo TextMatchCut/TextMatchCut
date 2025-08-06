@@ -51,7 +51,6 @@ func main() {
 				Message: "© 2021 Me",
 				Icon:    icon,
 			},
-			TitleBar: mac.TitleBarHidden(),
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        app.startup,

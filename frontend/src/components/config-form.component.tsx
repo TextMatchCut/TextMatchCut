@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import Sfx from './sfx.component';
 import SfxWeb from './sfx.web.component';
 import BackgroundInput from './background-input.component';
+import Font from './font.component';
 
 const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
   const setConfig = useAppContext(s => s.setConfig);
@@ -182,6 +183,7 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
       <div className="flex justify-between">
         <BackgroundInput />
         {__DESKTOP__ ? <Sfx /> : <SfxWeb />}
+        <Font />
       </div>
 
       <WidthHeight />

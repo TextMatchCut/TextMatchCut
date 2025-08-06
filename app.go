@@ -520,3 +520,8 @@ func ShowFileOnExplorer(filePath string) {
 		fmt.Fprintf(os.Stderr, "Error opening file explorer: %v\n", err)
 	}
 }
+
+func (a *App) OpenGithubRepo() {
+	repoURL := "https://github.com/yourusername/yourrepo"
+	runtime.BrowserOpenURL(a.ctx, repoURL)
+}

@@ -32,8 +32,12 @@ const BackgroundInput = () => {
       <Label className="mb-2">Background</Label>
       <Tabs defaultValue="image">
         <TabsList>
-          <TabsTrigger value="image">Image</TabsTrigger>
-          <TabsTrigger value="solid">Solid Color</TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="image">
+            Image
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="solid">
+            Solid Color
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="image">
           <PhotoProvider>
@@ -41,10 +45,12 @@ const BackgroundInput = () => {
               <img
                 src={src} // Fallback to a default image if no file is selected
                 alt="Background Preview"
-                className={cn({
-                  'max-w-[50%] h-auto mt-1 rounded-lg': true,
-                  hidden: !src,
-                })}
+                className={cn(
+                  'max-w-[50%] h-auto mt-1 rounded-lg cursor-pointer',
+                  {
+                    hidden: !src,
+                  }
+                )}
               />
             </PhotoView>
             <Input

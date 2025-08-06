@@ -40,8 +40,8 @@ const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
           'absolute w-full flex h-[70vh] max-h-[500px] overflow-hidden bg-card bottom-0 left-0 justify-center items-center'
         )}
         style={{
-          borderTopLeftRadius: __DESKTOP__ ? '1rem' : '5rem',
-          borderTopRightRadius: __DESKTOP__ ? '1rem' : '5rem',
+          borderTopLeftRadius: __DESKTOP__ ? '2.5rem' : '5rem',
+          borderTopRightRadius: __DESKTOP__ ? '2.5rem' : '5rem',
         }}
       >
         <Progress

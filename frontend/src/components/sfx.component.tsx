@@ -155,6 +155,7 @@ const Sfx = () => {
         </Select>
         {config.Sfx === 'custom' && filePath ? (
           <Button
+            className="cursor-pointer"
             onClick={() => {
               if (howlerInstance.current) {
                 howlerInstance.current.play();
@@ -166,6 +167,7 @@ const Sfx = () => {
           </Button>
         ) : config.Sfx !== 'custom' ? (
           <Button
+            className="cursor-pointer"
             onClick={() => {
               if (howlerInstance.current) {
                 howlerInstance.current.play();

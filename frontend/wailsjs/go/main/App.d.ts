@@ -4,6 +4,8 @@ import {types} from '../models';
 
 export function GetDefaultAssetsPath():Promise<types.GetDefaultAssetsPathResponse>;
 
+export function OpenGithubRepo():Promise<void>;
+
 export function PickAudioFile():Promise<types.PickAudioFileResponse>;
 
 export function RenderPreview(arg1:types.Config):Promise<types.RenderPreviewResponse>;

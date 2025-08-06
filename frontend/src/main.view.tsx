@@ -309,23 +309,23 @@ const MainView = () => {
 
   return (
     <>
-      <Card className="h-screen mx-auto">
+      <Card className="mx-auto select-none">
         <CardHeader>
-          <CardTitle>Generate Text Cut Match</CardTitle>
+          {!__DESKTOP__ && <CardTitle>Generate Text Cut Match</CardTitle>}
           <CardDescription className="w-[70%] m-auto">
             This tool generates a video with text cut matches based on the
             provided snippets. Change the settings below to customize the
             output.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto">
+        <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto rounded-lg p-4">
           <ConfigForm />
         </CardContent>
 
         <CardFooter className="m-auto flex gap-4">
           <Button
             variant="outline"
-            className="max-w-sm"
+            className="max-w-sm cursor-pointer"
             disabled={loading}
             onClick={
               __DESKTOP__
@@ -343,7 +343,7 @@ const MainView = () => {
 
           <Button
             variant="outline"
-            className="max-w-sm"
+            className="max-w-sm cursor-pointer"
             title="Renders the first frame of the video"
             disabled={loading}
             onClick={
@@ -362,7 +362,7 @@ const MainView = () => {
 
           <Button
             variant="outline"
-            className="max-w-sm"
+            className="max-w-sm cursor-pointer"
             disabled={loading}
             onClick={() => setOpenDrawer(!openDrawer)}
           >
