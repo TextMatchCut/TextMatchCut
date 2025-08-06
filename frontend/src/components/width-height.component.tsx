@@ -50,9 +50,11 @@ const WidthHeight = () => {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor="width-height">Resolution</Label>
-      <div className="flex items-center justify-between space-x-2">
+    <div className="flex flex-col gap-2 m-auto mt-4">
+      <Label className="self-center" htmlFor="width-height">
+        Resolution
+      </Label>
+      <div className="flex items-center space-x-2 gap-4">
         <Select
           value={custom ? 'custom' : `${config.Width}x${config.Height}`}
           onValueChange={handleChangeWidthHeight}
@@ -68,28 +70,27 @@ const WidthHeight = () => {
             <SelectItem value="custom">Custom</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      <div
-        className={clsx('flex w-full max-w-sm items-center gap-3', {
-          hidden: !custom,
-        })}
-      >
-        <Input
-          type="number"
-          id="width"
-          placeholder="Width"
-          value={config.Width}
-          onChange={setWidth}
-        />
-        <div>X</div>
-        <Input
-          type="number"
-          id="height"
-          placeholder="Height"
-          value={config.Height}
-          onChange={setHeight}
-        />
+        <div
+          className={clsx('flex w-full max-w-sm items-center gap-3', {
+            hidden: !custom,
+          })}
+        >
+          <Input
+            type="number"
+            id="width"
+            placeholder="Width"
+            value={config.Width}
+            onChange={setWidth}
+          />
+          <div>X</div>
+          <Input
+            type="number"
+            id="height"
+            placeholder="Height"
+            value={config.Height}
+            onChange={setHeight}
+          />
+        </div>
       </div>
     </div>
   );

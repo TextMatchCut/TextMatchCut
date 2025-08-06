@@ -23,7 +23,6 @@
     "@tailwindcss/vite": "^4.1.11",
     "@types/howler": "^2.2.12",
     "@types/node": "^24.1.0",
-    "@wailsio/runtime": "^3.0.0-alpha.66",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "howler": "^2.2.4",

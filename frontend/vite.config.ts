@@ -71,17 +71,18 @@ const watchGoLibPlugin = () => {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  const __DESKTOP__ = mode === 'wails';
   return {
     plugins: [
       react(),
       tailwindcss(),
-      watchGoLibPlugin(), // Add the custom plugin here
+      ...(__DESKTOP__ ? [watchGoLibPlugin()] : []),
     ],
     optimizeDeps: {
       exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
     },
     define: {
-      __DESKTOP__: mode === 'wails' ? 'true' : 'false',
+      __DESKTOP__: String(__DESKTOP__),
     },
     server: {
       headers: {

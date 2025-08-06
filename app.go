@@ -40,6 +40,13 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+func (a *App) GetDefaultAssetsPath() types.GetDefaultAssetsPathResponse {
+	return types.GetDefaultAssetsPathResponse{
+		Success: true,
+		Path:    filepath.Join(os.TempDir(), "textmatchcut"),
+	}
+}
+
 func (a *App) Run(config types.Config) types.RunResponse {
 	dev := false
 
@@ -91,8 +98,6 @@ func (a *App) Run(config types.Config) types.RunResponse {
 }
 
 func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
-	// config looks like this:
-	fmt.Printf("%+v\n", config)
 	finalImage, err := core.GenerateFrame(1, config, getDummySnippets(config), []string{
 		"embedded",
 	},
@@ -322,11 +327,16 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 		}
 		file.Close()
 		frameData := base64.StdEncoding.EncodeToString(fData)
-		runtime.EventsEmit(a.ctx, "frameRendered", types.FrameRenderedPayload{
+		// _ = base64.StdEncoding.EncodeToString(fData)
+		runtime.EventsEmit(a.ctx, "frame", types.FrameRenderedPayload{
 			FrameNum:    frameNum + 1,
 			TotalFrames: totalFrames,
 			FrameData:   frameData,
 		})
+		//wait
+		time.Sleep(10 * time.Millisecond) // Simulate processing time
+		// runtime.EventsEmit(a.ctx, "frame", nil)
+
 		// Progress update
 		if config.Verbose && (frameNum+1)%(totalFrames/10) == 0 {
 			fmt.Printf("Progress: %d/%d frames\n", frameNum+1, totalFrames)

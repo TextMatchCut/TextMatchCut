@@ -16,7 +16,6 @@
         "@tailwindcss/vite": "^4.1.11",
         "@types/howler": "^2.2.12",
         "@types/node": "^24.1.0",
-        "@wailsio/runtime": "^3.0.0-alpha.66",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "howler": "^2.2.4",
@@ -315,8 +314,6 @@
     "@types/react-dom": ["@types/react-dom@18.3.7", "", { "peerDependencies": { "@types/react": "^18.0.0" } }, "sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ=="],
 
     "@vitejs/plugin-react": ["@vitejs/plugin-react@2.2.0", "", { "dependencies": { "@babel/core": "^7.19.6", "@babel/plugin-transform-react-jsx": "^7.19.0", "@babel/plugin-transform-react-jsx-development": "^7.18.6", "@babel/plugin-transform-react-jsx-self": "^7.18.6", "@babel/plugin-transform-react-jsx-source": "^7.19.6", "magic-string": "^0.26.7", "react-refresh": "^0.14.0" }, "peerDependencies": { "vite": "^3.0.0" } }, "sha512-FFpefhvExd1toVRlokZgxgy2JtnBOdp4ZDsq7ldCWaqGSGn9UhWMAVm/1lxPL14JfNS5yGz+s9yFrQY6shoStA=="],
-
-    "@wailsio/runtime": ["@wailsio/runtime@3.0.0-alpha.66", "", {}, "sha512-ENLu8rn1griL1gFHJqkq1i+BVxrrA0JPJHYneUJYuf/s54kjuQViW0RKDEe/WTDo56ABpfykrd/T8OYpPUyXUw=="],
 
     "aria-hidden": ["aria-hidden@1.2.6", "", { "dependencies": { "tslib": "^2.0.0" } }, "sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA=="],
 

@@ -103,3 +103,9 @@ type FrameRenderedPayload struct {
 	TotalFrames int    `json:"totalFrames"`
 	FrameData   string `json:"frameData"`
 }
+
+type GetDefaultAssetsPathResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error,omitempty"`
+	Path    string `json:"path,omitempty"`
+}

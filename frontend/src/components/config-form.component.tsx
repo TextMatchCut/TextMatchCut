@@ -102,7 +102,7 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           />
         </div>
       </div>
-      <div className="flex justify-between gap-4">
+      <div className="grid grid-cols-3 gap-4 m-4 items-center place-content-center justify-center">
         <div className="flex gap-2">
           <Label htmlFor="font-size">Font Size</Label>
           <Input
@@ -179,11 +179,12 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           />
         </div>
       </div>
-      <BackgroundInput />
+      <div className="flex justify-between">
+        <BackgroundInput />
+        {__DESKTOP__ ? <Sfx /> : <SfxWeb />}
+      </div>
 
       <WidthHeight />
-
-      {__DESKTOP__ ? <Sfx /> : <SfxWeb />}
 
       {children}
     </>

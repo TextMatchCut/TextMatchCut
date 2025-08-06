@@ -134,7 +134,7 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, fontPa
 	// Create context
 	dc := gg.NewContext(config.Width, config.Height)
 
-	backgroundImage, err := gg.LoadImage("./frontend/public/test-bg.jpg")
+	backgroundImage, err := gg.LoadImage(os.TempDir() + "/textmatchcut/img/test-bg.jpg")
 	if err != nil {
 		return nil, fmt.Errorf("failed to load background image: %v", err)
 	}

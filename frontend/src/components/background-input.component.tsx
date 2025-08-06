@@ -9,7 +9,7 @@ import useAppContext from '@/store';
 import { rgbaToHex, hexToRgba } from '@/lib/utils';
 
 const BackgroundInput = () => {
-  const [src, setSrc] = useState<string>('/test-bg.jpg');
+  const [src, setSrc] = useState<string>('/img/test-bg.jpg');
   const config = useAppContext(s => s.config);
   const setConfig = useAppContext(s => s.setConfig);
 
@@ -28,7 +28,7 @@ const BackgroundInput = () => {
   }
 
   return (
-    <div className="flex w-full max-w-sm flex-col">
+    <div className="flex w-[40%] max-w-sm flex-col ">
       <Label className="mb-2">Background</Label>
       <Tabs defaultValue="image">
         <TabsList>
@@ -36,23 +36,24 @@ const BackgroundInput = () => {
           <TabsTrigger value="solid">Solid Color</TabsTrigger>
         </TabsList>
         <TabsContent value="image">
-          <Input
-            id="background"
-            type="file"
-            onChange={handleChange}
-            accept="image/*"
-          />
           <PhotoProvider>
             <PhotoView src={src}>
               <img
                 src={src} // Fallback to a default image if no file is selected
                 alt="Background Preview"
                 className={cn({
-                  'max-w-[20%] h-auto mt-2 rounded-lg': true,
+                  'max-w-[50%] h-auto mt-1 rounded-lg': true,
                   hidden: !src,
                 })}
               />
             </PhotoView>
+            <Input
+              className="mt-2"
+              id="background"
+              type="file"
+              onChange={handleChange}
+              accept="image/*"
+            />
           </PhotoProvider>
         </TabsContent>
         <TabsContent value="solid">

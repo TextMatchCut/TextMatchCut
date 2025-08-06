@@ -26,7 +26,7 @@ const Sfx = () => {
   // Initialize Howl instance only once when component mounts
   useEffect(() => {
     const howl = new Howl({
-      src: ['shutter.wav'],
+      src: ['sfx/shutter.wav'],
       preload: true,
       onload: () => {
         console.log('Audio loaded successfully');
@@ -48,7 +48,7 @@ const Sfx = () => {
         });
       },
     });
-    
+
     howlerInstance.current = howl;
 
     // Cleanup on unmount
@@ -56,7 +56,6 @@ const Sfx = () => {
       howl.unload();
     };
   }, []); // Empty dependency array = runs only once
-
 
   async function changeSfx(format: string, name: string, src: string) {
     if (!howlerInstance.current) {
@@ -109,11 +108,13 @@ const Sfx = () => {
         </SelectContent>
       </Select>
 
-      <Button onClick={() => {
-        if (howlerInstance.current) {
-          howlerInstance.current.play();
-        }
-      }}>
+      <Button
+        onClick={() => {
+          if (howlerInstance.current) {
+            howlerInstance.current.play();
+          }
+        }}
+      >
         <Play />
         Play Sound
       </Button>

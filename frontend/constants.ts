@@ -53,5 +53,5 @@ export const DEFAULT_CONFIG = {
   Verbose: false,
   SoundEffectPath: '',
   Duration: 2,
-  Sfx: 'shutter.wav',
+  Sfx: 'sfx/shutter.wav',
 } as Config;

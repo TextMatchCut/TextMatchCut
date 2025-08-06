@@ -7,7 +7,6 @@ import MainView from './main.view';
 import Header from './components/header.web.component';
 
 function App() {
-  console.log(window);
   return (
     <div className="w-full flex flex-col h-screen ">
       {!__DESKTOP__ ? <Header /> : null}

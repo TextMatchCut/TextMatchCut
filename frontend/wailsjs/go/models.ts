@@ -54,6 +54,22 @@ export namespace types {
 	        this.Sfx = source["Sfx"];
 	    }
 	}
+	export class GetDefaultAssetsPathResponse {
+	    success: boolean;
+	    error?: string;
+	    path?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GetDefaultAssetsPathResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.success = source["success"];
+	        this.error = source["error"];
+	        this.path = source["path"];
+	    }
+	}
 	export class PickAudioFileResponse {
 	    success: boolean;
 	    error?: string;

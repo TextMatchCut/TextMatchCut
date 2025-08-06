@@ -1,7 +1,11 @@
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { Run, RenderPreview } from '../wailsjs/go/main/App';
+import {
+  Run,
+  RenderPreview,
+  GetDefaultAssetsPath,
+} from '../wailsjs/go/main/App';
 import { fetchFile } from '@ffmpeg/util';
 import {
   Card,
@@ -22,8 +26,8 @@ import Drawer from '@/components/drawer.component';
 import { getDummySnippets, loadWasmBackend, loadFFmpeg } from '@/lib/utils';
 import ConfigForm from './components/config-form.component';
 import toast from './lib/toast';
-import { Events } from '@wailsio/runtime';
-
+import path from 'path';
+import { EventsOn, EventsOff } from '../wailsjs/runtime';
 const MainView = () => {
   const {
     config,
@@ -44,15 +48,12 @@ const MainView = () => {
 
   const loading = status === 'loading';
   useEffect(() => {
-    Events.On('frameRendered', args => {
-      console.log(args.data);
-      const { frameNum, totalFrames, frameData } = args.data;
+    EventsOn('frame', args => {
+      const { frameNum, totalFrames, frameData } = args;
       const p = (frameNum / totalFrames) * 100;
-      console.log({ p, status });
       setProgress(p);
       setPreview(`data:image/png;base64,${frameData}`);
     });
-
     async function writeAssets() {
       await ffmpeg.load();
       await ffmpeg.createDir('/vid');
@@ -78,11 +79,26 @@ const MainView = () => {
     }
 
     async function init() {
+      const res = await GetDefaultAssetsPath();
+      if (!res.success) {
+        console.error('Failed to get default assets path:', res.error);
+        toast({
+          message: 'Failed to get default assets path',
+          type: 'error',
+          title: 'Error',
+        });
+      }
+      // function type of setConfig seems to not work for some reason
+      // setConfig({
+      //   ...config,
+      //   Sfx: path.join(res.path!, 'sfx', 'shutter.wav'),
+      //   // assetsPath: res.path,
+      // });
+      // get sfx and bg img path
       setStatus('ready');
     }
     __DESKTOP__ ? init() : initWeb();
     return () => {
-      Events.Off('frameRendered');
       if (preview) {
         URL.revokeObjectURL(preview);
       }
@@ -141,6 +157,7 @@ const MainView = () => {
   async function renderPreview() {
     if (preview) {
       URL.revokeObjectURL(preview);
+      setVideoSrc(null);
     }
     try {
       // const input = {
@@ -166,6 +183,7 @@ const MainView = () => {
   async function renderPreviewWeb() {
     if (preview) {
       URL.revokeObjectURL(preview);
+      setVideoSrc(null);
     }
     // await ffmpegRef.current.load();
     try {
@@ -268,22 +286,13 @@ const MainView = () => {
   }
 
   async function renderVideo() {
-    Run(config)
+    return await Run(config)
       .then(async res => {
-        console.log('WASM function executed successfully:', res);
-        const time = new Date().getTime();
-        console.log('Generating video at', time);
-        // const fileData = await ffmpegRef.current.readFile('output.mp4');
-        // console.log('Output file read successfully:', fileData);
-        //@ts-ignore
+        setPreview(null);
         setVideoSrc(`data:video/mp4;base64,${res.videoData!}`);
-        const endTime = new Date().getTime();
-        const elapsed = (endTime - time) / 1000;
-        console.log('Video generation completed in', elapsed, 'seconds');
-        setElapsedTime(elapsed);
       })
-      .catch(err => {
-        console.error('Error calling WASM function:', err);
+      .finally(() => {
+        EventsOff('frameRendered');
       });
   }
 
@@ -300,7 +309,7 @@ const MainView = () => {
 
   return (
     <>
-      <Card className="mx-auto">
+      <Card className="h-screen mx-auto">
         <CardHeader>
           <CardTitle>Generate Text Cut Match</CardTitle>
           <CardDescription className="w-[70%] m-auto">
@@ -309,7 +318,7 @@ const MainView = () => {
             output.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2 max-w-lg m-auto">
+        <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto">
           <ConfigForm />
         </CardContent>
 
@@ -323,7 +332,6 @@ const MainView = () => {
                 ? actionStandalone(renderVideo)
                 : actionStandalone(renderVideoWeb)
             }
-            // onClick={__DESKTOP__ ? renderVideo : renderVideoWeb}
           >
             <Loader2Icon
               className={clsx('animate-spin', {
