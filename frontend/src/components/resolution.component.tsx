@@ -9,10 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import clsx from 'clsx';
 import useAppContext from '@/store';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
-const WidthHeight = () => {
+const Resolution = () => {
   const [custom, setCustom] = useState(false);
   const [config, setConfig] = useAppContext(
     useShallow(state => [state.config, state.setConfig])
@@ -52,9 +52,9 @@ const WidthHeight = () => {
   return (
     <div className="flex flex-col gap-2 m-auto mt-4">
       <Label className="self-center" htmlFor="width-height">
-        Resolution
+        Resolution & FPS & Duration
       </Label>
-      <div className="flex items-center space-x-2 gap-4">
+      <div className="flex items-center space-x-2 gap-4 mt-5">
         <Select
           value={custom ? 'custom' : `${config.Width}x${config.Height}`}
           onValueChange={handleChangeWidthHeight}
@@ -75,25 +75,75 @@ const WidthHeight = () => {
             hidden: !custom,
           })}
         >
-          <Input
-            type="number"
-            id="width"
-            placeholder="Width"
-            value={config.Width}
-            onChange={setWidth}
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              id="width"
+              placeholder="Width"
+              value={config.Width}
+              onChange={setWidth}
+            />
+            <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
+              Width
+            </span>
+          </div>
           <div>X</div>
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              id="height"
+              placeholder="Height"
+              value={config.Height}
+              onChange={setHeight}
+            />
+            <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
+              Height
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
           <Input
+            className="max-w-[70px]"
             type="number"
-            id="height"
-            placeholder="Height"
-            value={config.Height}
-            onChange={setHeight}
+            id="fps"
+            placeholder="FPS"
+            value={config.FPS}
+            onChange={e => {
+              const fps = parseInt(e.target.value);
+              if (isNaN(fps)) return;
+              setConfig({
+                ...config,
+                FPS: fps,
+              });
+            }}
           />
+          <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
+            FPS
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            className="max-w-[70px]"
+            type="number"
+            id="duration"
+            placeholder="Duration (s)"
+            value={config.Duration}
+            onChange={e => {
+              const duration = parseInt(e.target.value);
+              if (isNaN(duration)) return;
+              setConfig({
+                ...config,
+                Duration: duration,
+              });
+            }}
+          />
+          <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
+            Duration (s)
+          </span>
         </div>
       </div>
     </div>
   );
 };
 
-export default WidthHeight;
+export default Resolution;

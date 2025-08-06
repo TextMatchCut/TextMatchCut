@@ -286,8 +286,16 @@ const MainView = () => {
   }
 
   async function renderVideo() {
+    console.log('Rendering video with config:', config);
     return await Run(config)
       .then(async res => {
+        if (!res.success) {
+          return toast({
+            title: 'Error',
+            message: res.error || 'Failed to render video',
+            type: 'error',
+          });
+        }
         setPreview(null);
         setVideoSrc(`data:video/mp4;base64,${res.videoData!}`);
       })

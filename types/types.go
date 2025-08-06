@@ -28,6 +28,15 @@ type WasmInput struct {
 	VerticalSpread  float64       `json:"verticalSpread"`
 }
 
+// auto type generation fails to parse this struct correctly
+// maybe used in the future
+// type AIConfig struct {
+// 	Enabled  bool   `json:"enabled"`
+// 	ApiKey   string `json:"apiKey"`
+// 	Model    string `json:"model"`
+// 	Provider string `json:"provider"`
+// }
+
 type Config struct {
 	Width           int
 	Height          int
@@ -48,6 +57,9 @@ type Config struct {
 	OutputPath      string
 	Font            string //base64
 	AIEnabled       bool
+	ApiKey          string
+	Model           string
+	Provider        string
 	Verbose         bool
 	SoundEffectPath string
 	Feather         float64

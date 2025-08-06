@@ -14,9 +14,16 @@ import { Label } from './ui/label';
 import useAppContext from '@/store';
 import toast from '@/lib/toast';
 import { PickAudioFile } from '../../wailsjs/go/main/App';
+
+const INITIAL_SFX_OPTIONS = [
+  'sfx/shutter.wav',
+  'sfx/shutter1.wav',
+  'sfx/shutter2.wav',
+];
 let cleanup: (() => void) | null = null;
 const Sfx = () => {
   const config = useAppContext(s => s.config);
+  const [sfxOptions, setSfxOptions] = useState(INITIAL_SFX_OPTIONS);
   const setConfig = useAppContext(s => s.setConfig);
   const setStatus = useAppContext(s => s.setStatus);
   const [filePath, setFilePath] = useState<string | null>(null);
@@ -105,19 +112,25 @@ const Sfx = () => {
     });
   }
 
-  async function handleFilePick() {
+  const handleValueChange = async (value: string) => {
     try {
-      const res = await PickAudioFile();
-      if (res.success) {
-        setFilePath(res.path!);
-        changeSfx(
-          res.path!.split('.').pop()!,
-          'custom',
-          `data:audio/${res.path!.split('.').pop()!};base64,${res.audioData!}`,
-          true
-        );
+      if (value === 'Custom') {
+        const res = await PickAudioFile();
+        if (res.success && res.path) {
+          setSfxOptions(prev => [...prev, res.path!]);
+          changeSfx(
+            res.path!.split('.').pop()!,
+            'custom',
+            `data:audio/${res
+              .path!.split('.')
+              .pop()!};base64,${res.audioData!}`,
+            true
+          );
+          setConfig(conf => ({ ...conf, Sfx: res.path! }));
+        }
+        return;
       }
-      // changeSfx('wav', 'custom', folderPath);
+      changeSfx('wav', value, value);
     } catch (error) {
       console.error('Error picking audio file:', error);
       toast({
@@ -126,70 +139,43 @@ const Sfx = () => {
         title: 'Error',
       });
     }
-  }
+  };
 
   return (
-    <div className="flex flex-col items-center align-center mt-4">
+    <div className="flex flex-col flex-[0.25] items-center align-center mt-4">
       <Label htmlFor="sfx" className="self-start">
         Sfx
       </Label>
       <div className="flex gap-4">
-        <Select
-          value={config.Sfx}
-          onValueChange={value => {
-            setConfig(conf => ({ ...conf, Sfx: value }));
-            if (value !== 'custom') changeSfx('wav', value, value);
-          }}
-        >
+        <Select value={config.Sfx} onValueChange={handleValueChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select a sound effect" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="sfx/shutter.wav">Shutter</SelectItem>
-              <SelectItem value="sfx/shutter1.wav">Shutter 1</SelectItem>
-              <SelectItem value="sfx/shutter2.wav">Shutter 2</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
+              {[...sfxOptions, 'Custom'].map(option => (
+                <SelectItem key={option} value={option}>
+                  {INITIAL_SFX_OPTIONS.includes(option)
+                    ? option.replace('sfx/', '')
+                    : option}
+                </SelectItem>
+              ))}
             </SelectGroup>
           </SelectContent>
         </Select>
-        {config.Sfx === 'custom' && filePath ? (
-          <Button
-            className="cursor-pointer"
-            onClick={() => {
-              if (howlerInstance.current) {
-                howlerInstance.current.play();
-              }
-            }}
-          >
-            <Play />
-            Play
-          </Button>
-        ) : config.Sfx !== 'custom' ? (
-          <Button
-            className="cursor-pointer"
-            onClick={() => {
-              if (howlerInstance.current) {
-                howlerInstance.current.play();
-              }
-            }}
-          >
-            <Play />
-            Play
-          </Button>
-        ) : null}
       </div>
-
-      {config.Sfx === 'custom' ? (
-        <div className="flex flex-col gap-4 max-w-sm items-center mt-4">
-          {filePath ? (
-            <p className="text-sm text-gray-500">Selected file: {filePath}</p>
-          ) : null}
-          <Button onClick={handleFilePick}>
-            {filePath ? 'Change audio file' : 'Pick an audio file'}
-          </Button>
-        </div>
-      ) : null}
+      <Button
+        className="cursor-pointer mt-4"
+        onClick={() => {
+          console.log(`Playing sound effect: ${config.Sfx}`);
+          console.log(`Howler instance:`, howlerInstance.current);
+          if (howlerInstance.current) {
+            howlerInstance.current.play();
+          }
+        }}
+      >
+        <Play />
+      </Button>
     </div>
   );
 };

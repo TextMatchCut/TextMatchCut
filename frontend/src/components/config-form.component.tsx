@@ -5,7 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import WidthHeight from '@/components/width-height.component';
+import Resolution from '@/components/resolution.component';
 import { Label } from '@/components/ui/label';
 import { BlurType } from '@types';
 import useAppContext from '@/store';
@@ -15,6 +15,7 @@ import Sfx from './sfx.component';
 import SfxWeb from './sfx.web.component';
 import BackgroundInput from './background-input.component';
 import Font from './font.component';
+import Prompt from './prompt.component';
 
 const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
   const setConfig = useAppContext(s => s.setConfig);
@@ -63,9 +64,7 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
             </Select>
           </div>
         </div>
-      </div>
-      <div className="flex flex-row items-center justify-between space-x-4">
-        <div className="flex flex-col items-center justify-between gap-2 flex-1">
+        <div className="flex flex-row items-center justify-between space-x-4">
           <Label htmlFor="highlight-color">Highlight Color</Label>
           <Input
             id="highlight-color"
@@ -84,8 +83,6 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
               });
             }}
           />
-        </div>
-        <div className="flex flex-col items-center justify-between gap-2 flex-1">
           <Label htmlFor="text-color">Text Color</Label>
           <Input
             id="text-color"
@@ -180,13 +177,15 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           />
         </div>
       </div>
-      <div className="flex justify-between">
+      <div className="flex gap-4 min-w-[800px]">
         <BackgroundInput />
         {__DESKTOP__ ? <Sfx /> : <SfxWeb />}
         <Font />
       </div>
-
-      <WidthHeight />
+      <div>
+        <Prompt />
+      </div>
+      <Resolution />
 
       {children}
     </>

@@ -20,6 +20,9 @@ export namespace types {
 	    OutputPath: string;
 	    Font: string;
 	    AIEnabled: boolean;
+	    ApiKey: string;
+	    Model: string;
+	    Provider: string;
 	    Verbose: boolean;
 	    SoundEffectPath: string;
 	    Feather: number;
@@ -51,6 +54,9 @@ export namespace types {
 	        this.OutputPath = source["OutputPath"];
 	        this.Font = source["Font"];
 	        this.AIEnabled = source["AIEnabled"];
+	        this.ApiKey = source["ApiKey"];
+	        this.Model = source["Model"];
+	        this.Provider = source["Provider"];
 	        this.Verbose = source["Verbose"];
 	        this.SoundEffectPath = source["SoundEffectPath"];
 	        this.Feather = source["Feather"];

@@ -1,5 +1,5 @@
 import { BlurType, Config } from '@types';
-
+// import { types} from 'wailsjs/go//models';
 export const DEFAULT_WIDTH = 1920;
 export const DEFAULT_HEIGHT = 1080;
 export const DEFAULT_FPS = 3;
@@ -51,6 +51,9 @@ export const DEFAULT_CONFIG = {
   Font: '',
   BackgroundImage: '',
   AIEnabled: false,
+  ApiKey: '',
+  Model: '',
+  Provider: '',
   Verbose: false,
   SoundEffectPath: '',
   Duration: 2,

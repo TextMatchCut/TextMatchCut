@@ -97,7 +97,7 @@ const Font = () => {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="flex-[0.25] space-y-4">
       <Label>Font</Label>
       <div className="flex items-center justify-between space-x-2">
         <Select

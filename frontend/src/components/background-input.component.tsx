@@ -1,18 +1,20 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useAppContext from '@/store';
 import { rgbaToHex, hexToRgba } from '@/lib/utils';
+import { Replace } from 'lucide-react';
 import { DEFAULT_BACKGROUND_COLOR } from '@constants';
 
 const BackgroundInput = () => {
   const [src, setSrc] = useState<string>('/img/test-bg.jpg');
   const config = useAppContext(s => s.config);
   const setConfig = useAppContext(s => s.setConfig);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     if (src) {
@@ -55,7 +57,7 @@ const BackgroundInput = () => {
   }, []);
 
   return (
-    <div className="flex w-[40%] max-w-sm flex-col">
+    <div className="flex flex-1 max-w-sm flex-col">
       <Label className="mb-2">Background</Label>
       <Tabs
         defaultValue="image"
@@ -84,20 +86,32 @@ const BackgroundInput = () => {
         <TabsContent value="image">
           <PhotoProvider>
             <PhotoView src={src}>
-              <img
-                src={src} // Fallback to a default image if no file is selected
-                alt="Background Preview"
-                className={cn(
-                  'max-w-[50%] h-auto mt-1 rounded-lg cursor-pointer',
-                  {
-                    hidden: !src,
-                  }
-                )}
-              />
+              <div className="relative">
+                <img
+                  src={src} // Fallback to a default image if no file is selected
+                  alt="Background Preview"
+                  className={cn(
+                    'w-full h-auto mt-1 rounded-lg cursor-pointer',
+                    {
+                      hidden: !src,
+                    }
+                  )}
+                />
+                <div
+                  className="absolute top-[-15%] left-[90%] transform -translate-y-1/2 hover:bg-gray-700 p-2 rounded-lg"
+                  title="Replace"
+                  onClick={e => {
+                    e.stopPropagation();
+                    inputRef.current?.click();
+                  }}
+                >
+                  <Replace className=" w-[20px] h-[20px]" />
+                </div>
+              </div>
             </PhotoView>
             <Input
-              className="mt-2"
-              id="background"
+              ref={inputRef}
+              className="hidden"
               type="file"
               onChange={handleChange}
               accept="image/*"

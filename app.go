@@ -3,6 +3,7 @@ package main
 import (
 	"TextMatchCut/core"
 	"TextMatchCut/lib/gemini"
+	"TextMatchCut/lib/openai"
 	"TextMatchCut/types"
 	"bytes"
 	"context"
@@ -60,23 +61,49 @@ func (a *App) Run(config types.Config) types.RunResponse {
 
 		return types.RunResponse{Success: true, VideoData: outputPath}
 	}
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	fmt.Println("GEMINI_API_KEY:", apiKey)
-	if apiKey == "" {
-		log.Fatal("GEMINI_API_KEY environment variable is not set")
-	}
 	// Initialize random seed
 	rand.Seed(time.Now().UnixNano())
 
 	//get env for GEMINI_API_KEY
-	aiSnippets, err := gemini.GetSnippets(context.Background(), apiKey, config)
-	// Check if FFmpeg is available
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+	var aiSnippets []types.TextSnippet
+	if config.Provider == "gemini" {
+		apiKey := config.ApiKey
+		if apiKey == "" {
+			return types.RunResponse{
+				Success: false,
+				Error:   "API key is required for Gemini provider",
+			}
+		}
+		snippets, err := gemini.GetSnippets(context.Background(), config.ApiKey, config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting snippets from Gemini: %v\n", err)
+			return types.RunResponse{Success: false, Error: err.Error()}
+		}
+		aiSnippets = snippets
+	} else if config.Provider == "openai" {
+		apiKey := config.ApiKey
+		if apiKey == "" {
+			return types.RunResponse{
+				Success: false,
+				Error:   "API key is required for OpenAI provider",
+			}
+		}
+		snippets, err := openai.GetSnippets(context.Background(), apiKey, config)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting snippets from OpenAI: %v\n", err)
+			return types.RunResponse{Success: false, Error: err.Error()}
+		}
+		aiSnippets = snippets
+	} else {
+		fmt.Fprintf(os.Stderr, "Error: Unsupported provider '%s'. Supported providers are 'gemini' and 'openai'.\n", config.Provider)
+		return types.RunResponse{
+			Success: false,
+			Error:   fmt.Sprintf("Unsupported provider '%s'. Supported providers are 'gemini' and 'openai'.", config.Provider),
+		}
 	}
 
-	_, err = exec.LookPath("ffmpeg")
+	// Check if FFmpeg is available
+	_, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: FFmpeg not found in PATH. Please install FFmpeg.\n")
 		os.Exit(1)

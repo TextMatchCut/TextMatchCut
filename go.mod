@@ -4,7 +4,10 @@ go 1.23.0
 
 toolchain go1.24.5
 
-require github.com/wailsapp/wails/v2 v2.10.1
+require (
+	github.com/sashabaranov/go-openai v1.40.5
+	github.com/wailsapp/wails/v2 v2.10.1
+)
 
 require (
 	cloud.google.com/go v0.116.0 // indirect

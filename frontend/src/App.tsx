@@ -1,7 +1,7 @@
 import './App.css';
 import 'react-photo-view/dist/react-photo-view.css';
 
-import StatusBar from './components/StatusBar';
+import StatusBar from './components/status-bar.component';
 import { Toaster } from '@/components/ui/sonner';
 import MainView from './main.view';
 import Header from './components/header.web.component';
