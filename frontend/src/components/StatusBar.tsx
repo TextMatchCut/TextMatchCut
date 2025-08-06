@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
 import useAppContext from '@/store';
 import GithubIcon from '@/components/github-icon.component';
-import { OpenGithubRepo } from '../../wailsjs/go/main/App';
+import { OpenURL } from '../../wailsjs/go/main/App';
+import { REPO_URL } from '@constants';
 
 const StatusBar: React.FC = () => {
   const status = useAppContext(s => s.status);
@@ -14,7 +15,7 @@ const StatusBar: React.FC = () => {
         <div className="flex items-center gap-4 justify-center">
           <GithubIcon
             className="w-4 h-4 cursor-pointer"
-            onClick={OpenGithubRepo}
+            onClick={() => OpenURL(REPO_URL)}
           />
           <div className={cn({ hidden: !elapsedTime })}>
             Elapsed Time: {elapsedTime}

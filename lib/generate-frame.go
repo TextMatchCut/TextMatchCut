@@ -16,7 +16,7 @@ import (
 )
 
 func GenerateFrameAsBase64(frameNum int, config types.Config, aiSnippets []types.TextSnippet, fontFiles []string, highlightRadius float64) (string, error) {
-	img, err := core.GenerateFrame(frameNum, config, aiSnippets, fontFiles, highlightRadius)
+	img, err := core.GenerateFrame(frameNum, config, aiSnippets, highlightRadius)
 	if err != nil {
 		return "", err // Propagate the error
 	}

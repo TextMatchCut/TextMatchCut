@@ -48,10 +48,14 @@ export const DEFAULT_CONFIG = {
   VerticalSpread: DEFAULT_VERTICAL_SPREAD,
   Feather: DEFAULT_FEATHER,
   OutputPath: '',
-  FontDir: '',
+  Font: '',
+  BackgroundImage: '',
   AIEnabled: false,
   Verbose: false,
   SoundEffectPath: '',
   Duration: 2,
   Sfx: 'sfx/shutter.wav',
+  BackgroundImpl: 'image', // 'image' or 'solid'
 } as Config;
+
+export const REPO_URL = 'https://github.com/uncor3/text-match-cut';

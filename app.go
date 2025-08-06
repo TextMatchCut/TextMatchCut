@@ -98,9 +98,7 @@ func (a *App) Run(config types.Config) types.RunResponse {
 }
 
 func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
-	finalImage, err := core.GenerateFrame(1, config, getDummySnippets(config), []string{
-		"embedded",
-	},
+	finalImage, err := core.GenerateFrame(1, config, getDummySnippets(config),
 		// TODO: need to work on this
 		float64(config.FontSize*len(config.HighlightedText)),
 	)
@@ -246,17 +244,6 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 		fmt.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
 	}
-
-	// Find fonts
-	fontFiles, err := findFontFiles(config.FontDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to find fonts: %v", err)
-	}
-
-	if config.Verbose {
-		fmt.Printf("Found %d font(s)\n", len(fontFiles))
-	}
-
 	// // Generate text snippets
 	// snippets := make([]TextSnippet, 0, 5)
 	// for i := 0; i < 5; i++ {
@@ -273,7 +260,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 
 	// Create temporary directory for frames
 	tempDir := filepath.Join(os.TempDir(), "textmatchcut_frames_"+generateUniqueFilename("", ""))
-	err = os.MkdirAll(tempDir, 0755)
+	err := os.MkdirAll(tempDir, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %v", err)
 	}
@@ -299,7 +286,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 	// Generate frames
 	for frameNum := 0; frameNum < totalFrames; frameNum++ {
 		// Select random snippet and font
-		finalImage, err := core.GenerateFrame(frameNum, config, aiSnippets, fontFiles, highlightRadius)
+		finalImage, err := core.GenerateFrame(frameNum, config, aiSnippets, highlightRadius)
 
 		os.Create(filepath.Join(tempDir, fmt.Sprintf("frame_%05d.png", frameNum)))
 
@@ -434,37 +421,6 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 	return base64String, nil
 }
 
-// Find font files in directory
-func findFontFiles(fontDir string) ([]string, error) {
-	var fontFiles []string
-
-	if fontDir == "" {
-		// Use embedded font as fallback
-		return []string{"embedded"}, nil
-	}
-
-	err := filepath.Walk(fontDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext == ".ttf" || ext == ".otf" {
-			fontFiles = append(fontFiles, path)
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(fontFiles) == 0 {
-		return []string{"embedded"}, nil
-	}
-
-	return fontFiles, nil
-}
-
 func getDummySnippets(config types.Config) []types.TextSnippet {
 	data, err := os.ReadFile("dummy.json")
 	if err != nil {
@@ -521,7 +477,6 @@ func ShowFileOnExplorer(filePath string) {
 	}
 }
 
-func (a *App) OpenGithubRepo() {
-	repoURL := "https://github.com/yourusername/yourrepo"
-	runtime.BrowserOpenURL(a.ctx, repoURL)
+func (a *App) OpenURL(url string) {
+	runtime.BrowserOpenURL(a.ctx, url)
 }

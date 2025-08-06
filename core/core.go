@@ -2,6 +2,8 @@ package core
 
 import (
 	"TextMatchCut/types"
+	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"image"
@@ -16,7 +18,6 @@ import (
 
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
-	"golang.org/x/image/font/gofont/goregular"
 )
 
 // Generate random words for fallback text
@@ -100,23 +101,23 @@ func findFontFiles(fontDir string) ([]string, error) {
 }
 
 // Load font from file or use embedded font
-func loadFont(fontPath string, size float64) (*truetype.Font, error) {
-	if fontPath == "embedded" {
-		f, err := truetype.Parse(goregular.TTF)
-		if err != nil {
-			return nil, err
-		}
-		return f, nil
-	}
-
-	fontBytes, err := os.ReadFile(fontPath)
+func loadFontBase64(src string) (*truetype.Font, error) {
+	// if fontPath == "embedded" {
+	// 	f, err := truetype.Parse(goregular.TTF)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	return f, nil
+	// }
+	fmt.Printf("Loading font from base64: %s\n", src)
+	fontBytes, err := base64.StdEncoding.DecodeString(src)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode base64 font: %v", err)
 	}
 
 	f, err := truetype.Parse(fontBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse font: %v", err)
 	}
 
 	return f, nil
@@ -130,27 +131,45 @@ func generateUniqueFilename(prefix, extension string) string {
 }
 
 // Create text image frame
-func createTextImageFrame(config types.Config, snippet types.TextSnippet, fontPath string, highlightCenterX, highlightCenterY float64) (image.Image, error) {
+func createTextImageFrame(config types.Config, snippet types.TextSnippet, highlightCenterX, highlightCenterY float64) (image.Image, error) {
 	// Create context
 	dc := gg.NewContext(config.Width, config.Height)
+	fmt.Printf("Background color: %v\n", config.BackgroundColor)
+	if config.BackgroundImpl == "image" {
+		data, err := base64.StdEncoding.DecodeString(config.BackgroundImage)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode background image: %v", err)
+		}
+		reader := bytes.NewReader(data)
 
-	backgroundImage, err := gg.LoadImage(os.TempDir() + "/textmatchcut/img/test-bg.jpg")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load background image: %v", err)
+		// Decode the image data
+		backgroundImage, _, err := image.Decode(reader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load background image from data: %v", err)
+		}
+
+		dc.DrawImage(backgroundImage, 0, 0)
+	} else {
+
+		bgColor := color.RGBA{
+			R: config.BackgroundColor[0],
+			G: config.BackgroundColor[1],
+			B: config.BackgroundColor[2],
+			A: config.BackgroundColor[3],
+		}
+
+		// Set background
+		dc.SetRGBA255(int(bgColor.R), int(bgColor.G), int(bgColor.B), int(bgColor.A))
+		dc.Clear()
+
 	}
-	dc.DrawImage(backgroundImage, 0, 0)
+
 	// try to center the text
 	dc.Translate(
 		float64(config.Width/2-int(highlightCenterX)),
 		float64(config.Height/2-int(highlightCenterY)),
 	)
 	// Parse colors
-	bgColor := color.RGBA{
-		R: config.BackgroundColor[0],
-		G: config.BackgroundColor[1],
-		B: config.BackgroundColor[2],
-		A: config.BackgroundColor[3],
-	}
 
 	textColor := color.RGBA{
 		R: config.TextColor[0],
@@ -166,12 +185,8 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, fontPa
 		A: config.HighlightColor[3],
 	}
 
-	// Set background
-	dc.SetRGBA255(int(bgColor.R), int(bgColor.G), int(bgColor.B), int(bgColor.A))
-	// dc.Clear()
-
 	// Load font
-	ttfFont, err := loadFont(fontPath, float64(config.FontSize))
+	ttfFont, err := loadFontBase64(config.Font)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load font: %v", err)
 	}
@@ -889,9 +904,9 @@ func ApplyGaussianBlurFeathered(src image.Image, options types.EfficientVariable
 }
 
 // Calculate the center position of highlighted text in a text snippet
-func calculateHighlightPosition(config types.Config, snippet types.TextSnippet, fontPath string) (float64, float64, error) {
+func calculateHighlightPosition(config types.Config, snippet types.TextSnippet) (float64, float64, error) {
 	// Load font for measurements
-	ttfFont, err := loadFont(fontPath, float64(config.FontSize))
+	ttfFont, err := loadFontBase64(config.Font)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -941,17 +956,16 @@ func calculateHighlightPosition(config types.Config, snippet types.TextSnippet, 
 	return highlightCenterX, highlightCenterY, nil
 }
 
-func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSnippet, fontFiles []string, highlightRadius float64) (image.Image, error) {
+func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSnippet, highlightRadius float64) (image.Image, error) {
 	var snippet types.TextSnippet
 	if frameNum < len(aiSnippets) {
 		snippet = aiSnippets[frameNum]
 	} else {
 		snippet = aiSnippets[rand.Intn(len(aiSnippets))]
 	}
-	fontPath := fontFiles[rand.Intn(len(fontFiles))]
 
 	// Calculate highlighted text position BEFORE generating the frame
-	highlightCenterX, highlightCenterY, err := calculateHighlightPosition(config, snippet, fontPath)
+	highlightCenterX, highlightCenterY, err := calculateHighlightPosition(config, snippet)
 	if err != nil {
 		if config.Verbose {
 			fmt.Printf("Warning: Failed to calculate highlight position for frame %d: %v\n", frameNum, err)
@@ -961,7 +975,7 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 
 	// Generate frame
 	fmt.Printf("X and Y coordinates for highlight: %.2f, %.2f\n", highlightCenterX, highlightCenterY)
-	img, err := createTextImageFrame(config, snippet, fontPath, highlightCenterX, highlightCenterY)
+	img, err := createTextImageFrame(config, snippet, highlightCenterX, highlightCenterY)
 	if err != nil {
 		if config.Verbose {
 			fmt.Printf("Warning: Failed to generate frame %d: %v\n", frameNum, err)

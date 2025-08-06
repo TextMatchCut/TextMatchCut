@@ -1,12 +1,13 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useAppContext from '@/store';
 import { rgbaToHex, hexToRgba } from '@/lib/utils';
+import { DEFAULT_BACKGROUND_COLOR } from '@constants';
 
 const BackgroundInput = () => {
   const [src, setSrc] = useState<string>('/img/test-bg.jpg');
@@ -21,16 +22,57 @@ const BackgroundInput = () => {
     if (file) {
       const reader = new FileReader();
       reader.onload = e => {
-        setSrc(e.target?.result as string);
+        const base64Font = e.target?.result as string;
+        setSrc(base64Font);
+        setConfig(prevConfig => ({
+          ...prevConfig,
+          BackgroundImage: base64Font.split(',')[1],
+        }));
       };
       reader.readAsDataURL(file);
     }
   }
 
+  useEffect(() => {
+    const init = async () => {
+      const img = await fetch('/img/test-bg.jpg');
+      const blob = await img.blob();
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      setSrc(base64Image);
+      setConfig(prevConfig => ({
+        ...prevConfig,
+        BackgroundImage: base64Image.split(',')[1],
+      }));
+    };
+    init();
+  }, []);
+
   return (
     <div className="flex w-[40%] max-w-sm flex-col ">
       <Label className="mb-2">Background</Label>
-      <Tabs defaultValue="image">
+      <Tabs
+        defaultValue="image"
+        onValueChange={value => {
+          if (value === 'image') {
+            return setConfig(prevConfig => ({
+              ...prevConfig,
+
+              BackgroundImpl: 'image',
+            }));
+          }
+          return setConfig(prevConfig => ({
+            ...prevConfig,
+            BackgroundImpl: 'solid',
+          }));
+        }}
+      >
         <TabsList>
           <TabsTrigger className="cursor-pointer" value="image">
             Image

@@ -37,6 +37,7 @@ type Config struct {
 	HighlightColor  [4]uint8 // Changed from string to [4]uint8
 	TextColor       [4]uint8 // Changed from string to [4]uint8
 	BackgroundColor [4]uint8 // Changed from string to [4]uint8
+	BackgroundImage string   // base64 encoded image
 	BlurType        string
 	BlurRadius      float64
 	BlurAngle       float64 // New: for directional blur
@@ -45,12 +46,13 @@ type Config struct {
 	MaxLines        int
 	VerticalSpread  float64
 	OutputPath      string
-	FontDir         string
+	Font            string //base64
 	AIEnabled       bool
 	Verbose         bool
 	SoundEffectPath string
-	Feather         float64 // Add this field since you're sending it
+	Feather         float64
 	Sfx             string
+	BackgroundImpl  string // "image" or "solid"
 }
 
 type TextSnippet struct {

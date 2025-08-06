@@ -6,14 +6,32 @@ export default function toast(toastConfig: types.ToastConfig) {
   if (__DESKTOP__) {
     return Toast(toastConfig);
   }
-  sonnerToast(toastConfig.message, {
+
+  const options = {
     description: toastConfig.title,
-    // variant: toastConfig.type,
     duration: 5000,
-    position: 'top-center',
+    position: 'top-center' as const,
     action: {
       label: 'Dismiss',
       onClick: () => sonnerToast.dismiss(),
     },
-  });
+  };
+
+  switch (toastConfig.type) {
+    case 'success':
+      sonnerToast.success(toastConfig.message, options);
+      break;
+    case 'error':
+      sonnerToast.error(toastConfig.message, options);
+      break;
+    case 'warning':
+      sonnerToast.warning(toastConfig.message, options);
+      break;
+    case 'info':
+      sonnerToast.info(toastConfig.message, options);
+      break;
+    default:
+      sonnerToast(toastConfig.message, options);
+      break;
+  }
 }

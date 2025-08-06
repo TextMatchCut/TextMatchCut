@@ -6,8 +6,8 @@ export function GetDefaultAssetsPath() {
   return window['go']['main']['App']['GetDefaultAssetsPath']();
 }
 
-export function OpenGithubRepo() {
-  return window['go']['main']['App']['OpenGithubRepo']();
+export function OpenURL(arg1) {
+  return window['go']['main']['App']['OpenURL'](arg1);
 }
 
 export function PickAudioFile() {

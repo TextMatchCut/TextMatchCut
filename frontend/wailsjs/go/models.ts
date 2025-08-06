@@ -9,6 +9,7 @@ export namespace types {
 	    HighlightColor: number[];
 	    TextColor: number[];
 	    BackgroundColor: number[];
+	    BackgroundImage: string;
 	    BlurType: string;
 	    BlurRadius: number;
 	    BlurAngle: number;
@@ -17,12 +18,13 @@ export namespace types {
 	    MaxLines: number;
 	    VerticalSpread: number;
 	    OutputPath: string;
-	    FontDir: string;
+	    Font: string;
 	    AIEnabled: boolean;
 	    Verbose: boolean;
 	    SoundEffectPath: string;
 	    Feather: number;
 	    Sfx: string;
+	    BackgroundImpl: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -38,6 +40,7 @@ export namespace types {
 	        this.HighlightColor = source["HighlightColor"];
 	        this.TextColor = source["TextColor"];
 	        this.BackgroundColor = source["BackgroundColor"];
+	        this.BackgroundImage = source["BackgroundImage"];
 	        this.BlurType = source["BlurType"];
 	        this.BlurRadius = source["BlurRadius"];
 	        this.BlurAngle = source["BlurAngle"];
@@ -46,12 +49,13 @@ export namespace types {
 	        this.MaxLines = source["MaxLines"];
 	        this.VerticalSpread = source["VerticalSpread"];
 	        this.OutputPath = source["OutputPath"];
-	        this.FontDir = source["FontDir"];
+	        this.Font = source["Font"];
 	        this.AIEnabled = source["AIEnabled"];
 	        this.Verbose = source["Verbose"];
 	        this.SoundEffectPath = source["SoundEffectPath"];
 	        this.Feather = source["Feather"];
 	        this.Sfx = source["Sfx"];
+	        this.BackgroundImpl = source["BackgroundImpl"];
 	    }
 	}
 	export class GetDefaultAssetsPathResponse {
