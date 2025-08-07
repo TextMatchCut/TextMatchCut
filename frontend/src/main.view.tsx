@@ -44,20 +44,16 @@ const MainView = () => {
     setPreview,
   } = useAppContext(s => s);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const messageRef = useRef<HTMLParagraphElement | null>(null);
 
   const loading = status === 'loading';
   useEffect(() => {
-    EventsOn('frame', args => {
-      const { frameNum, totalFrames, frameData } = args;
-      const p = (frameNum / totalFrames) * 100;
-      setProgress(p);
-      setPreview(`data:image/png;base64,${frameData}`);
-    });
     async function writeAssets() {
       await ffmpeg.load();
       await ffmpeg.createDir('/vid');
-      await ffmpeg.writeFile('/shutter.wav', await fetchFile('/shutter.wav'));
+      await ffmpeg.writeFile(
+        '/shutter.wav',
+        await fetchFile('/sfx/shutter.wav')
+      );
       console.log('Assets written successfully');
     }
     async function initWeb() {
@@ -157,6 +153,9 @@ const MainView = () => {
   async function renderPreview() {
     if (preview) {
       URL.revokeObjectURL(preview);
+    }
+    if (videoSrc) {
+      URL.revokeObjectURL(videoSrc!);
       setVideoSrc(null);
     }
     try {
@@ -183,6 +182,10 @@ const MainView = () => {
   async function renderPreviewWeb() {
     if (preview) {
       URL.revokeObjectURL(preview);
+      setVideoSrc(null);
+    }
+    if (videoSrc) {
+      URL.revokeObjectURL(videoSrc!);
       setVideoSrc(null);
     }
     // await ffmpegRef.current.load();
@@ -280,13 +283,22 @@ const MainView = () => {
       );
     } catch (error) {
       // await ffmpegRef.current.deleteDir('/vid');
-
-      console.error('Error during image generation:', error);
+      toast({
+        title: 'Error',
+        message: 'Failed to render video',
+        type: 'error',
+      });
+      console.error('Error during rendering:', error);
     }
   }
 
   async function renderVideo() {
-    console.log('Rendering video with config:', config);
+    EventsOn('frame', args => {
+      const { frameNum, totalFrames, frameData } = args;
+      const p = (frameNum / totalFrames) * 100;
+      setProgress(p);
+      setPreview(`data:image/png;base64,${frameData}`);
+    });
     return await Run(config)
       .then(async res => {
         if (!res.success) {
@@ -330,61 +342,54 @@ const MainView = () => {
           <ConfigForm />
         </CardContent>
 
-        <CardFooter className="m-auto flex gap-4">
-          <Button
-            variant="outline"
-            className="max-w-sm cursor-pointer"
-            disabled={loading}
-            onClick={
-              __DESKTOP__
-                ? actionStandalone(renderVideo)
-                : actionStandalone(renderVideoWeb)
-            }
-          >
-            <Loader2Icon
-              className={clsx('animate-spin', {
-                hidden: !loading,
-              })}
-            />
-            Render
-          </Button>
+        <CardFooter className="m-auto h-[100px]">
+          <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-md bg-white/10 w-fit p-2 rounded-lg">
+            <Button
+              variant="outline"
+              className="max-w-sm cursor-pointer"
+              disabled={loading}
+              onClick={
+                __DESKTOP__
+                  ? actionStandalone(renderVideo)
+                  : actionStandalone(renderVideoWeb, 250)
+              }
+            >
+              <Loader2Icon
+                className={clsx('animate-spin', {
+                  hidden: !loading,
+                })}
+              />
+              Render
+            </Button>
 
-          <Button
-            variant="outline"
-            className="max-w-sm cursor-pointer"
-            title="Renders the first frame of the video"
-            disabled={loading}
-            onClick={
-              __DESKTOP__
-                ? actionStandalone(renderPreview)
-                : actionStandalone(renderPreviewWeb)
-            }
-          >
-            <Loader2Icon
-              className={clsx('animate-spin', {
-                hidden: !loading,
-              })}
-            />
-            Preview
-          </Button>
+            <Button
+              variant="outline"
+              className="max-w-sm cursor-pointer"
+              title="Renders the first frame of the video"
+              disabled={loading}
+              onClick={
+                __DESKTOP__
+                  ? actionStandalone(renderPreview)
+                  : actionStandalone(renderPreviewWeb, 250)
+              }
+            >
+              <Loader2Icon
+                className={clsx('animate-spin', {
+                  hidden: !loading,
+                })}
+              />
+              Preview
+            </Button>
 
-          <Button
-            variant="outline"
-            className="max-w-sm cursor-pointer"
-            disabled={loading}
-            onClick={() => setOpenDrawer(!openDrawer)}
-          >
-            <ArrowUp />
-            Open Drawer
-          </Button>
-          <div>
-            <p ref={messageRef} className="text-sm text-muted-foreground">
-              {loading
-                ? 'Loading...'
-                : status === 'error'
-                ? 'Error occurred while rendering.'
-                : null}
-            </p>
+            <Button
+              variant="outline"
+              className="max-w-sm cursor-pointer"
+              disabled={loading}
+              onClick={() => setOpenDrawer(!openDrawer)}
+            >
+              <ArrowUp />
+              Open Drawer
+            </Button>
           </div>
         </CardFooter>
       </Card>
@@ -392,19 +397,27 @@ const MainView = () => {
         <PhotoProvider>
           <div className="m-auto">
             {!preview && !videoSrc ? (
-              <>
-                <h2 className="text-center text-lg font-semibold mb-4">
-                  Nothing to see here
-                </h2>
-                <p className="text-center text-sm text-muted-foreground">
-                  Render a preview or video to see the results here.
-                </p>
-              </>
+              status === 'processing' ? (
+                <>
+                  <h2 className="text-center text-lg font-semibold mb-4">
+                    Processing...
+                  </h2>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-center text-lg font-semibold mb-4">
+                    Nothing to see here
+                  </h2>
+                  <p className="text-center text-sm text-muted-foreground">
+                    Render a preview or video to see the results here.
+                  </p>
+                </>
+              )
             ) : null}
             {preview ? (
               <>
                 <h2 className="text-center text-lg font-semibold mb-4">
-                  Preview
+                  {status === 'processing' ? 'Processing...' : 'Preview'}
                 </h2>
 
                 <PhotoView src={preview}>
@@ -423,7 +436,7 @@ const MainView = () => {
                   onClick={
                     __DESKTOP__
                       ? actionStandalone(renderVideo)
-                      : actionStandalone(renderVideoWeb)
+                      : actionStandalone(renderVideoWeb, 250)
                   }
                 >
                   Render Full Video

@@ -109,7 +109,6 @@ func loadFontBase64(src string) (*truetype.Font, error) {
 	// 	}
 	// 	return f, nil
 	// }
-	fmt.Printf("Loading font from base64: %s\n", src)
 	fontBytes, err := base64.StdEncoding.DecodeString(src)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode base64 font: %v", err)

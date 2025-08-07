@@ -44,8 +44,6 @@ func GenerateFrameFromJSON(inputJSON string) (string, error) {
 	)
 }
 
-// Update your ApplyGaussianBlur function to use this
-
 func main() {
 	fmt.Println("Go WebAssembly module loaded!")
 	js.Global().Set("GenerateFrameFromJSON", js.FuncOf(func(this js.Value, p []js.Value) interface{} {
@@ -60,24 +58,5 @@ func main() {
 		return js.ValueOf(result)
 	}))
 	// Keep the Go runtime alive
-	// select { // Block forever
-	// case <-make(chan struct{}):
-	// 	runtime.Gosched() // Yield to allow other goroutines to run
-	// }
 	select {}
-}
-
-// Helper functions
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

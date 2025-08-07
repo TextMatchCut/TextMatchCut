@@ -98,8 +98,8 @@ const BackgroundInput = () => {
                   )}
                 />
                 <div
-                  className="absolute top-[-15%] left-[90%] transform -translate-y-1/2 hover:bg-gray-700 p-2 rounded-lg"
-                  title="Replace"
+                  className="absolute top-[-1.5rem] left-[90%] transform -translate-y-1/2 hover:bg-gray-700 p-2 rounded-lg"
+                  title="Replace background image"
                   onClick={e => {
                     e.stopPropagation();
                     inputRef.current?.click();

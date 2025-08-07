@@ -27,7 +27,7 @@ import useAppContext from '@/store';
 //   }
 // }
 
-export function actionStandalone(fn: () => Promise<void>) {
+export function actionStandalone(fn: () => Promise<void>, delay = 0) {
   const { setOpenDrawer, setStatus, setProgress, setElapsedTime } =
     useAppContext.getState();
   const time = new Date().getTime();
@@ -55,6 +55,6 @@ export function actionStandalone(fn: () => Promise<void>) {
           setStatus('ready');
         }, 1000); // Reset status after 1 second
       }
-    }, 0);
+    }, delay);
   };
 }

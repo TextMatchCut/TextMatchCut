@@ -13,7 +13,7 @@ const buildWasm = () => {
       'public/lib.wasm'
     )} ${path.resolve(__dirname, '../lib')}`;
 
-    console.log('Compiling Go to WASM...');
+    console.log('Compiling WASM...');
     exec(command, (err, stdout, stderr) => {
       if (err) {
         console.error('WASM Compilation Error:', stderr);
@@ -50,9 +50,7 @@ const watchGoLibPlugin = () => {
 
       // 3. Listen for 'change' events on the watched files
       server.watcher.on('change', async file => {
-        console.log(file);
         if (file.endsWith('.go')) {
-          console.log(`Go file changed: ${file}. Recompiling WASM...`);
           try {
             await buildWasm();
             // 4. Trigger a full page reload in the browser
