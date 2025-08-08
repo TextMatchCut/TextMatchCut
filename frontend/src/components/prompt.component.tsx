@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useAppContext from '@/store';
 import { useState } from 'react';
+import { OpenURL } from '../../wailsjs/go/main/App';
 
 const Prompt = () => {
   const config = useAppContext(s => s.config);
@@ -30,7 +31,7 @@ const Prompt = () => {
   return (
     <div className="max-w-[600px] m-auto my-5">
       <Tabs
-        defaultValue="random"
+        defaultValue={config.AIEnabled ? config.Provider : 'random'}
         onValueChange={value => {
           setConfig(prevConfig => ({
             ...prevConfig,
@@ -38,7 +39,7 @@ const Prompt = () => {
               ? {
                   AIEnabled: true,
                   Provider: 'gemini',
-                  Model: 'gemini-1.5-flash',
+                  Model: 'gemini-2.5-flash',
                 }
               : value === 'openai'
               ? {
@@ -102,33 +103,32 @@ const Prompt = () => {
                 />
               </div>
             </div>
-            <div>
-              <Label htmlFor="gemini-prompt">Prompt Template</Label>
-              <textarea
-                className="w-full p-2 border rounded-md mt-2"
-                id="gemini-prompt"
-                placeholder="Enter your prompt template..."
-                value={promptText}
-                onChange={e => setPromptText(e.target.value)}
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Available variables: $HighlightedText, $MinLines, $MaxLines,
-                $Duration, $Width, $Height, $FPS, $Font
-              </p>
-            </div>
-            <div>
-              <Label>Preview (with current config values):</Label>
-              <div className="p-3 bg-muted rounded-md text-sm">
-                {parsePrompt(promptText)}
-              </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Get your free Api key at {'  '}
+              {!__DESKTOP__ ? (
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline"
+                >
+                  https://aistudio.google.com/apikey
+                </a>
+              ) : (
+                <p
+                  className="text-blue-500 hover:underline cursor-pointer"
+                  onClick={() => OpenURL('https://aistudio.google.com/apikey')}
+                >
+                  https://aistudio.google.com/apikey
+                </p>
+              )}
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="openai" className="w-fit">
-          <div className="space-y-4">
-            <div className="flex gap-4 items-center align-center justify-center">
+        <TabsContent value="openai" className="w-full">
+          <div className="space-y-4 w-full">
+            <div className="w-full flex gap-4 items-center align-center justify-center">
               <div>
                 <Label htmlFor="openai-model">OpenAI Model</Label>
                 <Input
@@ -158,30 +158,34 @@ const Prompt = () => {
                 />
               </div>
             </div>
-            <div>
-              <Label htmlFor="openai-prompt">Prompt Template</Label>
-              <textarea
-                className="w-full p-2 border rounded-md mt-2"
-                id="openai-prompt"
-                placeholder="Enter your prompt template..."
-                value={promptText}
-                onChange={e => setPromptText(e.target.value)}
-                rows={4}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Available variables: $HighlightedText, $MinLines, $MaxLines,
-                $Duration, $Width, $Height, $FPS, $Font
-              </p>
-            </div>
-            <div>
-              <Label>Preview (with current config values):</Label>
-              <div className="p-3 bg-muted rounded-md text-sm">
-                {parsePrompt(promptText)}
-              </div>
-            </div>
           </div>
         </TabsContent>
       </Tabs>
+      {config.AIEnabled && (
+        <>
+          <div className="mt-4">
+            <Label htmlFor="openai-prompt">Prompt Template</Label>
+            <textarea
+              className="w-full p-2 border rounded-md mt-2"
+              id="openai-prompt"
+              placeholder="Enter your prompt template..."
+              value={promptText}
+              onChange={e => setPromptText(e.target.value)}
+              rows={4}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Available variables: $HighlightedText, $MinLines, $MaxLines,
+              $Duration, $Width, $Height, $FPS, $Font
+            </p>
+          </div>
+          <div>
+            <Label>Preview (with current config values):</Label>
+            <div className="p-3 bg-muted rounded-md text-sm">
+              {parsePrompt(promptText)}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

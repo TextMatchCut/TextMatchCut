@@ -7,24 +7,32 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Howl } from 'howler';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Play } from 'lucide-react';
 import { Label } from './ui/label';
 import useAppContext from '@/store';
 import toast from '@/lib/toast';
 
+const INITIAL_SFX_OPTIONS = [
+  'sfx/shutter.wav',
+  'sfx/shutter1.wav',
+  'sfx/shutter2.wav',
+];
+let cleanup: (() => void) | null = null;
 const Sfx = () => {
   const config = useAppContext(s => s.config);
+  const [sfxOptions, setSfxOptions] = useState(INITIAL_SFX_OPTIONS);
   const setConfig = useAppContext(s => s.setConfig);
-  const setStatus = useAppContext(s => s.setStatus);
   const ffmpeg = useAppContext(s => s.ffmpeg);
-
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const howlerInstance = useRef<Howl | null>(null);
 
   // Initialize Howl instance only once when component mounts
   useEffect(() => {
+    const init = async () => {
+      await ffmpeg.load();
+    };
     const howl = new Howl({
       src: ['sfx/shutter.wav'],
       preload: true,
@@ -48,18 +56,29 @@ const Sfx = () => {
         });
       },
     });
-
     howlerInstance.current = howl;
 
+    init();
     // Cleanup on unmount
     return () => {
       howl.unload();
     };
   }, []); // Empty dependency array = runs only once
 
-  async function changeSfx(format: string, name: string, src: string) {
+  async function changeSfx(
+    format: string,
+    name: string,
+    src: string,
+    file = false
+  ) {
     if (!howlerInstance.current) {
       return;
+    }
+    cleanup?.();
+    if (file) {
+      cleanup = () => {
+        URL.revokeObjectURL(src);
+      };
     }
     howlerInstance.current.unload();
     const howlerPromise = new Promise<void>((resolve, reject) => {
@@ -85,30 +104,79 @@ const Sfx = () => {
     await Promise.all([howlerPromise, ffmpeg.writeFile(name, src)]);
   }
 
+  const handleValueChange = async (value: string) => {
+    if (value === 'Custom') {
+      inputRef.current?.click();
+      return;
+    }
+
+    const filePath = `sfx/${value}`;
+
+    try {
+      await changeSfx('wav', value, filePath);
+      setConfig(conf => ({ ...conf, Sfx: value }));
+    } catch (error) {
+      console.error('Error changing SFX:', error);
+      toast({
+        message: 'Failed to change sound effect',
+        type: 'error',
+        title: 'Error',
+      });
+    }
+  };
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const src = URL.createObjectURL(file);
+    const format = file.name.split('.').pop() || 'wav';
+    const name = `${file.name}-Custom`;
+
+    try {
+      await changeSfx(format, name, src, true);
+      setSfxOptions(prev => [
+        ...prev.filter(p => INITIAL_SFX_OPTIONS.includes(p)),
+        name,
+      ]);
+      setConfig(conf => ({ ...conf, Sfx: name }));
+    } catch (error) {
+      console.error('Error picking audio file:', error);
+      toast({
+        message: 'Failed to load the selected audio file',
+        type: 'error',
+        title: 'Error',
+      });
+    }
+  };
+
   return (
-    <div>
-      <Label htmlFor="sfx">Sfx</Label>
-
-      <Select
-        onValueChange={value => {
-          setConfig(conf => ({ ...conf, Sfx: value }));
-          if (value !== 'custom') changeSfx('wav', value, value);
-        }}
-      >
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Select a sound effect" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="shutter.wav">Shutter</SelectItem>
-            <SelectItem value="shutter1.wav">Shutter 1</SelectItem>
-            <SelectItem value="shutter2.wav">Shutter 2</SelectItem>
-            <SelectItem value="custom">Custom</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
+    <div className="flex flex-col flex-[0.25] items-center align-center mt-4">
+      <Label htmlFor="sfx" className="self-start">
+        Sfx
+      </Label>
+      <div className="flex gap-4">
+        <Select value={config.Sfx} onValueChange={handleValueChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select a sound effect" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {[...sfxOptions, 'Custom'].map(option => (
+                <SelectItem key={option} value={option}>
+                  {INITIAL_SFX_OPTIONS.includes(option)
+                    ? option.replace('sfx/', '')
+                    : option}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
       <Button
+        className="cursor-pointer mt-4"
         onClick={() => {
           if (howlerInstance.current) {
             howlerInstance.current.play();
@@ -116,48 +184,14 @@ const Sfx = () => {
         }}
       >
         <Play />
-        Play Sound
       </Button>
-      {config.Sfx === 'custom' ? (
-        <div className="w-full max-w-sm items-center gap-3">
-          <Label htmlFor="sfx">Sfx</Label>
-          <Input
-            id="sfx"
-            type="file"
-            accept="audio/*"
-            onChange={async e => {
-              setStatus('loading');
-
-              if (!e.target.files || e.target.files.length === 0) return;
-
-              const newSrc = e.target.files[0];
-              if (newSrc) {
-                // const f = new FileReader();
-                const src = URL.createObjectURL(newSrc);
-                const format = newSrc.name.split('.').pop();
-                if (!format) {
-                  alert('Invalid file format');
-                  return;
-                }
-                await changeSfx(format, newSrc.name, src)
-                  .then(() => {
-                    setStatus('ready');
-                  })
-                  .catch(error => {
-                    console.error('Error changing SFX:', error);
-                    setStatus('error');
-                    toast({
-                      message: 'Failed to change the sound effect',
-                      type: 'error',
-                      title: 'Error',
-                    });
-                  });
-              }
-            }}
-            placeholder="Drag and drop a sound file here or click to select"
-          />
-        </div>
-      ) : null}
+      <input
+        className="hidden"
+        type="file"
+        accept="audio/*"
+        ref={inputRef}
+        onChange={handleFileChange}
+      />
     </div>
   );
 };

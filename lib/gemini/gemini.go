@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os/exec"
+	"os"
 	"strings"
 	"sync"
 
@@ -46,20 +46,15 @@ func getGeminiClient(ctx context.Context) (*genai.Client, error) {
 	return geminiClientInstance, err
 }
 
-func GetSnippets(ctx context.Context, apiKey string, config types.Config) ([]types.TextSnippet, error) {
+func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet, error) {
+	os.Setenv("GEMINI_API_KEY", config.ApiKey)
 	client, err := getGeminiClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	geminiConfig := getGeminiConfig()
 
-	// Check if FFmpeg is available
-	_, err = exec.LookPath("ffmpeg")
-	if err != nil {
-		return nil, fmt.Errorf("FFmpeg not found in PATH")
-	}
-
+	// TODO: WTF is this?
 	// Auto-calculate font size if not specified explicitly
 	if config.FontSize == 50 { // Default value
 		config.FontSize = int(float64(config.Height) * 0.05)
@@ -69,7 +64,7 @@ func GetSnippets(ctx context.Context, apiKey string, config types.Config) ([]typ
 	log.Printf("Prompt for AI: %s\n", prompt)
 	result, err := client.Models.GenerateContent(
 		ctx,
-		"gemini-2.5-flash",
+		config.Model,
 		genai.Text(prompt),
 		geminiConfig,
 	)

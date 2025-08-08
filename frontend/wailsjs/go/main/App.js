@@ -22,6 +22,10 @@ export function Run(arg1) {
   return window['go']['main']['App']['Run'](arg1);
 }
 
+export function ShowFileOnExplorer(arg1) {
+  return window['go']['main']['App']['ShowFileOnExplorer'](arg1);
+}
+
 export function Toast(arg1) {
   return window['go']['main']['App']['Toast'](arg1);
 }

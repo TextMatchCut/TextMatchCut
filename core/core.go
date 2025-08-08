@@ -10,8 +10,6 @@ import (
 	"image/color"
 	"math"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -45,7 +43,11 @@ func generateRandomWords(numWords int) string {
 }
 
 // Generate random text snippet with highlighted text
-func generateRandomTextSnippet(highlightedText string, minLines, maxLines int) types.TextSnippet {
+func GenerateRandomTextSnippet(config types.Config) types.TextSnippet {
+	minLines := config.MinLines
+	maxLines := config.MaxLines
+	highlightedText := config.HighlightedText
+
 	numLines := rand.Intn(maxLines-minLines+1) + minLines
 	highlightLineIndex := rand.Intn(numLines)
 
@@ -69,39 +71,9 @@ func generateRandomTextSnippet(highlightedText string, minLines, maxLines int) t
 	}
 }
 
-// Find font files in directory
-func findFontFiles(fontDir string) ([]string, error) {
-	var fontFiles []string
-
-	if fontDir == "" {
-		// Use embedded font as fallback
-		return []string{"embedded"}, nil
-	}
-
-	err := filepath.Walk(fontDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext == ".ttf" || ext == ".otf" {
-			fontFiles = append(fontFiles, path)
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if len(fontFiles) == 0 {
-		return []string{"embedded"}, nil
-	}
-
-	return fontFiles, nil
-}
-
 // Load font from file or use embedded font
 func loadFontBase64(src string) (*truetype.Font, error) {
+	/*to be implemented */
 	// if fontPath == "embedded" {
 	// 	f, err := truetype.Parse(goregular.TTF)
 	// 	if err != nil {

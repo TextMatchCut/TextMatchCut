@@ -2,6 +2,9 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { toBlobURL } from '@ffmpeg/util';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
+import useAppContext from '@/store';
+import { Config } from '@types';
+import { DEFAULT_CONFIG } from '@constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -112,7 +115,6 @@ export const loadFFmpeg = async (ffmpeg: FFmpeg) => {
       'text/javascript'
     ),
   });
-  console.log('FFmpeg loaded successfully');
 };
 
 export const readAsRawBase64 = (f: File | undefined) => {
@@ -135,4 +137,35 @@ export const readAsRawBase64 = (f: File | undefined) => {
       reader.readAsDataURL(f);
     }
   );
+};
+
+export const serializeState = () => {
+  const { config } = useAppContext.getState();
+  /*
+   Api key is sensitive and should not be serialized
+   Background image, Sfx and Font are high in size and may go beyond localStorage limits
+   TODO: Update components to make use of IndexedDB for larger data storage
+  */
+  const unwantedKeys = [
+    'ApiKey',
+    'BackgroundImage',
+    'Sfx',
+    'Font',
+  ] as (keyof Config)[];
+
+  const filteredConfigState = Object.keys(config).reduce((acc, key) => {
+    if (!unwantedKeys.includes(key as keyof Config)) {
+      acc[key] = config[key as keyof typeof config];
+    }
+    return acc;
+  }, {} as Record<string, any>);
+
+  filteredConfigState['Sfx'] = DEFAULT_CONFIG.Sfx;
+  filteredConfigState['BackgroundImage'] = DEFAULT_CONFIG.BackgroundImage;
+  filteredConfigState['Font'] = DEFAULT_CONFIG.Font;
+
+  return JSON.stringify({
+    config: filteredConfigState,
+    __APP_VERSION__,
+  });
 };

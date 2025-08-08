@@ -5,6 +5,28 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 type SetConfig = Config | ((config: Config) => Config);
 
+const _config = () => {
+  try {
+    let app = localStorage.getItem('app');
+    if (app) {
+      app = JSON.parse(app);
+      if (!app || typeof app !== 'object') return DEFAULT_CONFIG;
+      const typedConfig = app as {
+        config: Config;
+        __APP_VERSION__: string;
+      };
+      if (typedConfig.__APP_VERSION__ !== __APP_VERSION__) {
+        console.warn('App version mismatch. Resetting config to default.');
+        return DEFAULT_CONFIG;
+      }
+      return typedConfig.config || DEFAULT_CONFIG;
+    }
+    return DEFAULT_CONFIG;
+  } catch (error) {
+    console.error('Failed to parse app config from localStorage:', error);
+    return DEFAULT_CONFIG;
+  }
+};
 const useAppContext = create<{
   blurType: BlurType;
   config: Config;
@@ -22,13 +44,14 @@ const useAppContext = create<{
   setPreview: (preview: string | null) => void;
 }>(set => ({
   blurType: BlurType.Horizontal,
-  config: DEFAULT_CONFIG,
+  config: _config() as Config,
   status: 'loading',
   elapsedTime: 0,
   progress: 0,
   openDrawer: false,
-  ffmpeg: new FFmpeg(),
+  ffmpeg: (!__DESKTOP__ ? new FFmpeg() : null) as FFmpeg, // Ensure FFmpeg is only initialized in web
   preview: null,
+  starPromptShown: false,
   setPreview: (preview: string | null) => set({ preview }),
   setBlurType: (blurType: BlurType) => set({ blurType }),
   // TODO : ?
@@ -49,5 +72,5 @@ const useAppContext = create<{
   setOpenDrawer: (openDrawer: boolean) => set({ openDrawer }),
   setProgress: (progress: number) => set({ progress }),
 }));
-export { useAppContext as getAppContext };
+
 export default useAppContext;

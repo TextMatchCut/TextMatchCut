@@ -1,10 +1,11 @@
-import { PhotoProvider, PhotoView } from 'react-photo-view';
-import { useState, useEffect, useRef } from 'react';
 import './App.css';
+import { PhotoProvider, PhotoView } from 'react-photo-view';
+import { useState, useEffect } from 'react';
 import {
   Run,
   RenderPreview,
   GetDefaultAssetsPath,
+  ShowFileOnExplorer,
 } from '../wailsjs/go/main/App';
 import { fetchFile } from '@ffmpeg/util';
 import {
@@ -23,11 +24,16 @@ import useAppContext from '@/store';
 import clsx from 'clsx';
 import 'react-photo-view/dist/react-photo-view.css';
 import Drawer from '@/components/drawer.component';
-import { getDummySnippets, loadWasmBackend, loadFFmpeg } from '@/lib/utils';
+import {
+  getDummySnippets,
+  loadWasmBackend,
+  loadFFmpeg,
+  serializeState,
+} from '@/lib/utils';
 import ConfigForm from './components/config-form.component';
 import toast from './lib/toast';
-import path from 'path';
 import { EventsOn, EventsOff } from '../wailsjs/runtime';
+
 const MainView = () => {
   const {
     config,
@@ -44,6 +50,7 @@ const MainView = () => {
     setPreview,
   } = useAppContext(s => s);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [videoOutputPath, setVideoOutputPath] = useState<string | null>(null);
 
   const loading = status === 'loading';
   useEffect(() => {
@@ -61,6 +68,7 @@ const MainView = () => {
         await loadWasmBackend();
         await loadFFmpeg(ffmpeg);
         await ffmpeg.load();
+        console.log('FFmpeg loaded successfully');
         await writeAssets();
         setStatus('ready');
       } catch (error) {
@@ -68,7 +76,9 @@ const MainView = () => {
         toast({
           message: 'Failed to initialize the application',
           type: 'error',
-          title: 'Initialization Error',
+          title: `Initialization Error : ${
+            error instanceof Error ? error.message : `${String(error)}`
+          }`,
         });
         setStatus('error');
       }
@@ -94,7 +104,13 @@ const MainView = () => {
       setStatus('ready');
     }
     __DESKTOP__ ? init() : initWeb();
+    let saveInterval = setInterval(() => {
+      console.log('Saving app state to localStorage...');
+      localStorage.setItem('app', serializeState());
+    }, 10000);
+
     return () => {
+      clearInterval(saveInterval);
       if (preview) {
         URL.revokeObjectURL(preview);
       }
@@ -103,13 +119,6 @@ const MainView = () => {
       }
     };
   }, []);
-
-  // async function cleanUp(){
-  //   if (!videoRef.current?.src) {
-  //     console.warn('No video source to clean up.');
-  //     return;
-  //   }
-  // }
 
   async function renderFrame(input: any) {
     console.log('Rendering frame with input:', input);
@@ -142,11 +151,10 @@ const MainView = () => {
       console.log('Image frame rendered:', i + 1);
       setPreview(`data:image/png;base64,${base64String}`);
       const p = ((i + 1) / 5) * 100;
-      console.log({ p, status });
       setProgress(p);
       setTimeout(() => {
         resolve();
-      }, 50); // Ensure UI updates before resolving //react was a wrong pick for this project - i realized it once it's too late
+      }, 50); // Ensure UI updates before resolving
     });
   }
 
@@ -159,14 +167,6 @@ const MainView = () => {
       setVideoSrc(null);
     }
     try {
-      // const input = {
-      //   frameNum: 1,
-      //   config,
-      //   aiSnippets: getDummySnippets(),
-      //   fontFiles: ['embedded'], // Use the embedded font
-      //   highlightRadius: 400.0,
-      //   totalFrames: 1,
-      // };
       await renderFrame(config);
     } catch (err) {
       setStatus('error');
@@ -188,13 +188,11 @@ const MainView = () => {
       URL.revokeObjectURL(videoSrc!);
       setVideoSrc(null);
     }
-    // await ffmpegRef.current.load();
     try {
       const input = {
         frameNum: 1,
         config,
         aiSnippets: getDummySnippets(),
-        fontFiles: ['embedded'], // Use the embedded font
         highlightRadius: 400.0,
         totalFrames: 1,
       };
@@ -210,36 +208,15 @@ const MainView = () => {
     }
   }
   async function renderVideoWeb() {
-    // if (!isWasmReady) {
-    //   console.error('WASM is not ready yet.');
-    //   return;
-    // }
-
     try {
       const input = {
         frameNum: -1,
         config,
         aiSnippets: getDummySnippets(),
-        fontFiles: ['embedded'], // Use the embedded font
         highlightRadius: 400.0,
         totalFrames: 1,
       };
-      // await writeAssets();
-      // if (true) {
-      //   await ffmpegRef.current.createDir('/vid');
 
-      //   // URL.revokeObjectURL(videoSrc);
-      //   /* ffmpeg does not seem to support deleting non-empty directories */
-      //   await ffmpegRef.current.listDir('/vid').then(async files => {
-      //     console.log('Files in /vid:', files);
-      //     for (const file of files) {
-      //       if (file.isDir) continue;
-      //       await ffmpegRef.current.deleteFile(`/vid/${file.name}`);
-      //     }
-      //   });
-      // }
-
-      console.log('FFmpeg loaded, starting image generation...');
       for (let i = 0; i < 5; i++) {
         try {
           input.frameNum = i + 1; // Update frame number
@@ -249,7 +226,7 @@ const MainView = () => {
         }
       }
 
-      const filterComplex = `[0:v]scale=1920:1080,format=yuv420p[v];[1:a]aloop=loop=${
+      const filterComplex = `format=yuv420p[v];[1:a]aloop=loop=${
         5 - 1
       }:size=48000[a]`;
       await ffmpeg.exec([
@@ -293,12 +270,17 @@ const MainView = () => {
   }
 
   async function renderVideo() {
+    console.log('Rendering video with config:', config);
     EventsOn('frame', args => {
       const { frameNum, totalFrames, frameData } = args;
       const p = (frameNum / totalFrames) * 100;
       setProgress(p);
       setPreview(`data:image/png;base64,${frameData}`);
     });
+    if (videoSrc) {
+      URL.revokeObjectURL(videoSrc);
+      setVideoSrc(null);
+    }
     return await Run(config)
       .then(async res => {
         if (!res.success) {
@@ -310,6 +292,7 @@ const MainView = () => {
         }
         setPreview(null);
         setVideoSrc(`data:video/mp4;base64,${res.videoData!}`);
+        setVideoOutputPath(res.path!);
       })
       .finally(() => {
         EventsOff('frameRendered');
@@ -325,7 +308,9 @@ const MainView = () => {
     link.click();
   }
 
-  async function showVideoLocation() {}
+  async function showVideoLocation() {
+    ShowFileOnExplorer(videoOutputPath!);
+  }
 
   return (
     <>
@@ -343,7 +328,7 @@ const MainView = () => {
         </CardContent>
 
         <CardFooter className="m-auto h-[100px]">
-          <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-md bg-white/10 w-fit p-2 rounded-lg">
+          <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-sm bg-white/10 w-fit p-2 px-4 rounded-2xl">
             <Button
               variant="outline"
               className="max-w-sm cursor-pointer"
@@ -457,7 +442,7 @@ const MainView = () => {
                   className="mt-4"
                   onClick={__DESKTOP__ ? showVideoLocation : downloadVideoWeb}
                 >
-                  Download
+                  {videoOutputPath ? 'Show Video Location' : 'Download Video'}
                 </Button>
               </>
             ) : null}

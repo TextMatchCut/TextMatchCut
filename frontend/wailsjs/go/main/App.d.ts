@@ -12,4 +12,6 @@ export function RenderPreview(arg1:types.Config):Promise<types.RenderPreviewResp
 
 export function Run(arg1:types.Config):Promise<types.RunResponse>;
 
+export function ShowFileOnExplorer(arg1:string):Promise<void>;
+
 export function Toast(arg1:types.ToastConfig):Promise<void>;

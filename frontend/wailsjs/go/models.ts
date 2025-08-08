@@ -117,6 +117,7 @@ export namespace types {
 	export class RunResponse {
 	    success: boolean;
 	    error?: string;
+	    path?: string;
 	    videoData?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -127,6 +128,7 @@ export namespace types {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
 	        this.error = source["error"];
+	        this.path = source["path"];
 	        this.videoData = source["videoData"];
 	    }
 	}

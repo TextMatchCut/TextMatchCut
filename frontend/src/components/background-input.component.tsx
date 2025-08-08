@@ -11,7 +11,7 @@ import { Replace } from 'lucide-react';
 import { DEFAULT_BACKGROUND_COLOR } from '@constants';
 
 const BackgroundInput = () => {
-  const [src, setSrc] = useState<string>('/img/test-bg.jpg');
+  const [src, setSrc] = useState<string>('/img/bg-1.jpg');
   const config = useAppContext(s => s.config);
   const setConfig = useAppContext(s => s.setConfig);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +37,7 @@ const BackgroundInput = () => {
 
   useEffect(() => {
     const init = async () => {
-      const img = await fetch('/img/test-bg.jpg');
+      const img = await fetch('/img/bg-1.jpg');
       const blob = await img.blob();
       const base64Image = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();

@@ -37,7 +37,7 @@ const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
       ></div>
       <div
         className={cn(
-          'absolute w-full flex h-[70vh] max-h-[500px] overflow-hidden bg-card bottom-0 left-0 justify-center items-center'
+          'absolute w-full flex h-[70vh] max-h-[500px] overflow-hidden bg-card bottom-0 left-0 justify-center items-center overflow-y-auto'
         )}
         style={{
           borderTopLeftRadius: __DESKTOP__ ? '2.5rem' : '5rem',

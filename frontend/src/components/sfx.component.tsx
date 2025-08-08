@@ -167,8 +167,6 @@ const Sfx = () => {
       <Button
         className="cursor-pointer mt-4"
         onClick={() => {
-          console.log(`Playing sound effect: ${config.Sfx}`);
-          console.log(`Howler instance:`, howlerInstance.current);
           if (howlerInstance.current) {
             howlerInstance.current.play();
           }

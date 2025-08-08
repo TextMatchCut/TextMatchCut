@@ -39,6 +39,8 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	a.checkAndEmitIfNoFfmpeg()
 }
 
 func (a *App) GetDefaultAssetsPath() types.GetDefaultAssetsPathResponse {
@@ -49,18 +51,34 @@ func (a *App) GetDefaultAssetsPath() types.GetDefaultAssetsPathResponse {
 }
 
 func (a *App) Run(config types.Config) types.RunResponse {
-	dev := false
-
-	if dev {
-		outputPath, err := generateFrames(config, getDummySnippets(config), *a)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			return types.RunResponse{Success: false, Error: err.Error()}
-			// os.Exit(1)
-		}
-
-		return types.RunResponse{Success: true, VideoData: outputPath}
+	_, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: FFmpeg not found in PATH. Please install FFmpeg.\n")
+		return types.RunResponse{Success: false, Error: "FFmpeg not found in PATH. Please install FFmpeg."}
 	}
+
+	// dev := false
+
+	snippets := make([]types.TextSnippet, 0, 5)
+	for i := 0; i < 5; i++ {
+		snippet := core.GenerateRandomTextSnippet(config)
+		snippets = append(snippets, snippet)
+	}
+
+	if config.Verbose {
+		fmt.Printf("Generated %d text snippets\n", len(snippets))
+	}
+
+	// if dev {
+	// 	outputPath, err := generateFrames(config, snippets, *a)
+	// 	if err != nil {
+	// 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	// 		return types.RunResponse{Success: false, Error: err.Error()}
+	// 		// os.Exit(1)
+	// 	}
+
+	// 	return types.RunResponse{Success: true, VideoData: outputPath}
+	// }
 	// Initialize random seed
 	rand.Seed(time.Now().UnixNano())
 
@@ -68,13 +86,14 @@ func (a *App) Run(config types.Config) types.RunResponse {
 	var aiSnippets []types.TextSnippet
 	if config.Provider == "gemini" {
 		apiKey := config.ApiKey
+		println("Using Gemini provider with API key:", apiKey)
 		if apiKey == "" {
 			return types.RunResponse{
 				Success: false,
 				Error:   "API key is required for Gemini provider",
 			}
 		}
-		snippets, err := gemini.GetSnippets(context.Background(), config.ApiKey, config)
+		snippets, err := gemini.GetSnippets(context.Background(), config)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting snippets from Gemini: %v\n", err)
 			return types.RunResponse{Success: false, Error: err.Error()}
@@ -102,30 +121,40 @@ func (a *App) Run(config types.Config) types.RunResponse {
 		}
 	}
 
-	// Check if FFmpeg is available
-	_, err := exec.LookPath("ffmpeg")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: FFmpeg not found in PATH. Please install FFmpeg.\n")
-		os.Exit(1)
-	}
-
 	// Auto-calculate font size if not specified explicitly
 	if config.FontSize == 50 { // Default value
 		config.FontSize = int(float64(config.Height) * 0.05)
 	}
 
-	videoData, err := generateFrames(config, aiSnippets, *a)
+	videoData, fPath, err := generateFrames(config, aiSnippets, *a)
+
+	// save to user download dir
+	if config.OutputPath == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return types.RunResponse{Success: false, Error: err.Error()}
+		}
+		config.OutputPath = filepath.Join(homeDir, "Downloads", "output.mp4")
+	}
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return types.RunResponse{Success: false, Error: err.Error()}
 	}
 
 	// Success
-	return types.RunResponse{Success: true, VideoData: videoData}
+	return types.RunResponse{Success: true, VideoData: videoData, Path: fPath}
 }
 
 func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
-	finalImage, err := core.GenerateFrame(1, config, getDummySnippets(config),
+
+	snippets := make([]types.TextSnippet, 0, 5)
+	for i := 0; i < 5; i++ {
+		snippet := core.GenerateRandomTextSnippet(config)
+		snippets = append(snippets, snippet)
+	}
+
+	finalImage, err := core.GenerateFrame(1, config, snippets,
 		// TODO: need to work on this
 		float64(config.FontSize*len(config.HighlightedText)),
 	)
@@ -240,22 +269,6 @@ func (a *App) Toast(toastConfig types.ToastConfig) {
 			DefaultButton: "OK",
 		})
 	}
-
-	// selection, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-	// 	Title:         toastConfig.Title,
-	// 	Message:       toastConfig.Message,
-	// 	Buttons:       []string{"one", "two", "three", "four"},
-	// 	DefaultButton: "two",
-	// 	CancelButton:  "three",
-	// })
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "Error showing message dialog: %v\n", err)
-	// 	return
-	// }
-	// if selection == "" {
-	// 	fmt.Println("No selection made")
-	// 	return
-	// }
 }
 
 // Generate unique filename
@@ -266,30 +279,19 @@ func generateUniqueFilename(prefix, extension string) string {
 }
 
 // Generate video frames and return base64 data
-func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) (string, error) {
+func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) (string, string, error) {
 	if config.Verbose {
 		fmt.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
 	}
-	// // Generate text snippets
-	// snippets := make([]TextSnippet, 0, 5)
-	// for i := 0; i < 5; i++ {
-	// 	snippet := generateRandomTextSnippet(config.HighlightedText, config.MinLines, config.MaxLines)
-	// 	snippets = append(snippets, snippet)
-	// }
 
-	// if config.Verbose {
-	// 	fmt.Printf("Generated %d text snippets\n", len(snippets))
-	// }
-
-	// Calculate total frames
 	totalFrames := config.FPS * config.Duration
 
 	// Create temporary directory for frames
 	tempDir := filepath.Join(os.TempDir(), "textmatchcut_frames_"+generateUniqueFilename("", ""))
 	err := os.MkdirAll(tempDir, 0755)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %v", err)
+		return "", "", fmt.Errorf("failed to create temp directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -306,7 +308,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 	tempDir = filepath.Join(os.TempDir(), "textmatchcut_frames_"+generateUniqueFilename("", ""))
 	err = os.MkdirAll(tempDir, 0755)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %v", err)
+		return "", "", fmt.Errorf("failed to create temp directory: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -318,26 +320,26 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 		os.Create(filepath.Join(tempDir, fmt.Sprintf("frame_%05d.png", frameNum)))
 
 		if err != nil {
-			return "", fmt.Errorf("failed to generate frame %d: %v", frameNum, err)
+			return "", "", fmt.Errorf("failed to generate frame %d: %v", frameNum, err)
 		}
 		// Save frame
 		framePath := filepath.Join(tempDir, fmt.Sprintf("frame_%05d.png", frameNum))
 		file, err := os.Create(framePath)
 		if err != nil {
-			return "", fmt.Errorf("failed to create frame file: %v", err)
+			return "", "", fmt.Errorf("failed to create frame file: %v", err)
 		}
 
 		var buffer bytes.Buffer
 		err = png.Encode(&buffer, finalImage)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading preview file: %v\n", err)
-			return "", fmt.Errorf("failed to encode frame %d: %v", frameNum, err)
+			return "", "", fmt.Errorf("failed to encode frame %d: %v", frameNum, err)
 		}
 
 		fData := buffer.Bytes()
 		_, err = file.Write(fData)
 		if err != nil {
-			return "", fmt.Errorf("failed to write frame %d: %v", frameNum, err)
+			return "", "", fmt.Errorf("failed to write frame %d: %v", frameNum, err)
 		}
 		file.Close()
 		frameData := base64.StdEncoding.EncodeToString(fData)
@@ -361,12 +363,20 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 		fmt.Printf("All frames generated. Creating video...\n")
 	}
 
+	hDir, err := os.UserHomeDir()
+	if err != nil {
+		hDir = os.TempDir()
+	}
+
+	fDir := filepath.Join(hDir, ".textmatchcut")
+
 	// Create video using FFmpeg
-	outputPath := filepath.Join(os.TempDir(), generateUniqueFilename("text_match_cut_", "mp4"))
+	outputPath := filepath.Join(fDir, generateUniqueFilename("text_match_cut_", "mp4"))
 	// outputPath := config.OutputPath
 	// if outputPath == "" {
 	// 	outputPath = generateUniqueFilename("text_match_cut", "mp4")
 	// }
+	os.MkdirAll(fDir, 0755)
 
 	var cmd *exec.Cmd
 	if config.SoundEffectPath != "" {
@@ -429,7 +439,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 
 	err = cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("ffmpeg failed: %v", err)
+		return "", "", fmt.Errorf("ffmpeg failed: %v", err)
 	}
 
 	fmt.Printf("Video created successfully: %s\n", outputPath)
@@ -438,16 +448,17 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 	// 1. Read the generated file into a byte slice
 	fileBytes, err := os.ReadFile(outputPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read generated video file: %v", err)
+		return "", "", fmt.Errorf("failed to read generated video file: %v", err)
 	}
 
 	// 2. Encode the byte slice to a Base64 string
 	base64String := base64.StdEncoding.EncodeToString(fileBytes)
 
 	// 3. Return the base64 string instead of the path
-	return base64String, nil
+	return base64String, fDir, nil
 }
 
+/* dont remove usefull in development */
 func getDummySnippets(config types.Config) []types.TextSnippet {
 	data, err := os.ReadFile("dummy.json")
 	if err != nil {
@@ -481,7 +492,7 @@ func getDummySnippets(config types.Config) []types.TextSnippet {
 	return aiSnippets
 }
 
-func ShowFileOnExplorer(filePath string) {
+func (a *App) ShowFileOnExplorer(filePath string) {
 	if filePath == "" {
 		fmt.Println("No file path provided")
 		return
@@ -506,4 +517,12 @@ func ShowFileOnExplorer(filePath string) {
 
 func (a *App) OpenURL(url string) {
 	runtime.BrowserOpenURL(a.ctx, url)
+}
+
+func (a *App) checkAndEmitIfNoFfmpeg() {
+	_, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "no-ffmpeg", nil)
+		fmt.Println("FFmpeg not found in PATH")
+	}
 }

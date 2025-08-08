@@ -96,6 +96,7 @@ type ToastConfig struct {
 type RunResponse struct {
 	Success   bool   `json:"success"`
 	Error     string `json:"error,omitempty"`
+	Path      string `json:"path,omitempty"`
 	VideoData string `json:"videoData,omitempty"`
 }
 

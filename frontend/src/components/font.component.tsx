@@ -14,9 +14,9 @@ import toast from '@/lib/toast';
 import { OpenURL } from '../../wailsjs/go/main/App';
 
 const FONT_OPTIONS = [
+  'Roboto-Italic',
   'Roboto-Black',
   'Roboto-BlackItalic',
-  'Roboto-Italic',
   'Roboto-Condensed',
   'Roboto-Light',
   'Minecraft',
@@ -24,7 +24,9 @@ const FONT_OPTIONS = [
 const SELECT_OPTION = 'Choose a font file';
 
 const Font = () => {
+  const config = useAppContext(s => s.config);
   const [fontOptions, setFontOptions] = useState(FONT_OPTIONS);
+  // TODO: use config.Font to set the initial font
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0]);
   const setConfig = useAppContext(s => s.setConfig);
   const [isHovered, setIsHovered] = useState(false);
