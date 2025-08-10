@@ -4,11 +4,23 @@ import { Label } from '@/components/ui/label';
 import useAppContext from '@/store';
 import { useState } from 'react';
 import { OpenURL } from '../../wailsjs/go/main/App';
+import { useFormContext, Controller } from 'react-hook-form';
+import { cn } from '@/lib/utils';
+
+const FieldError: React.FC<{ error?: any }> = ({ error }) => {
+  if (!error) return null;
+  return <p className="text-red-500 text-xs mt-1">{error.message as string}</p>;
+};
 
 const Prompt = () => {
+  const {
+    control,
+    register,
+    formState: { errors },
+  } = useFormContext();
+
   const config = useAppContext(s => s.config);
   const setConfig = useAppContext(s => s.setConfig);
-
   const [promptText, setPromptText] = useState(
     "Respond with 5 different text snippets with the highlighted text '$HighlightedText'. Each snippet should have between $MinLines and $MaxLines lines. Make sure that the highlighted text is not always at the start but random"
   );
@@ -76,31 +88,37 @@ const Prompt = () => {
             <div className="flex gap-4 items-center align-center justify-center">
               <div>
                 <Label htmlFor="gemini-model">Gemini Model</Label>
-                <Input
-                  id="gemini-model"
-                  placeholder="e.g., gemini-1.5-flash"
-                  value={config?.Model || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      Model: e.target.value,
-                    }))
-                  }
+                <Controller
+                  defaultValue={'gemini-2.5-flash'}
+                  control={control}
+                  name="Model"
+                  render={({ field }) => (
+                    <Input
+                      id="gemini-model"
+                      placeholder="e.g., gemini-2.5-flash"
+                      {...field}
+                      className={cn({ 'border-red-500': errors.Model })}
+                    />
+                  )}
                 />
+                <FieldError error={errors.Model} />
               </div>
               <div>
                 <Label htmlFor="gemini-api-key">API key</Label>
-                <Input
-                  id="gemini-api-key"
-                  placeholder="Enter your Gemini API key"
-                  value={config?.ApiKey || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      ApiKey: e.target.value,
-                    }))
-                  }
+                <Controller
+                  defaultValue={''}
+                  control={control}
+                  name="ApiKey"
+                  render={({ field }) => (
+                    <Input
+                      id="gemini-api-key"
+                      placeholder="Enter your Gemini API key"
+                      {...field}
+                      className={cn({ 'border-red-500': errors.ApiKey })}
+                    />
+                  )}
                 />
+                <FieldError error={errors.ApiKey} />
               </div>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
@@ -131,31 +149,36 @@ const Prompt = () => {
             <div className="w-full flex gap-4 items-center align-center justify-center">
               <div>
                 <Label htmlFor="openai-model">OpenAI Model</Label>
-                <Input
-                  id="openai-model"
-                  placeholder="e.g., gpt-4o, gpt-3.5-turbo"
-                  value={config?.Model || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      Model: e.target.value,
-                    }))
-                  }
+                <Controller
+                  control={control}
+                  name="Model"
+                  render={({ field }) => (
+                    <Input
+                      id="openai-model"
+                      placeholder="e.g., gpt-4o, gpt-3.5-turbo"
+                      {...field}
+                      className={cn({ 'border-red-500': errors.Model })}
+                    />
+                  )}
                 />
+                <FieldError error={errors.Model} />
               </div>
               <div>
                 <Label htmlFor="openai-api-key">API key</Label>
-                <Input
-                  id="openai-api-key"
-                  placeholder="Enter your OpenAI API key"
-                  value={config?.ApiKey || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      ApiKey: e.target.value,
-                    }))
-                  }
+                <Controller
+                  control={control}
+                  name="ApiKey"
+                  defaultValue={''}
+                  render={({ field }) => (
+                    <Input
+                      id="openai-api-key"
+                      placeholder="Enter your OpenAI API key"
+                      {...field}
+                      className={cn({ 'border-red-500': errors.ApiKey })}
+                    />
+                  )}
                 />
+                <FieldError error={errors.ApiKey} />
               </div>
             </div>
           </div>

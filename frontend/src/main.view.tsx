@@ -33,6 +33,10 @@ import {
 import ConfigForm from './components/config-form.component';
 import toast from './lib/toast';
 import { EventsOn, EventsOff } from '../wailsjs/runtime';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { configSchema } from '@/lib/validation';
+import { types } from '../wailsjs/go/models';
 
 const MainView = () => {
   const {
@@ -51,6 +55,23 @@ const MainView = () => {
   } = useAppContext(s => s);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoOutputPath, setVideoOutputPath] = useState<string | null>(null);
+
+  const methods = useForm<types.Config>({
+    resolver: zodResolver(configSchema),
+    defaultValues: config,
+    mode: 'onChange',
+  });
+
+  const { watch } = methods;
+
+  // This effect keeps your global zustand store in sync with the form state,
+  // so real-time previews (like the prompt preview) continue to work.
+  useEffect(() => {
+    const subscription = watch(values => {
+      setConfig(prev => ({ ...prev, ...values }));
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setConfig]);
 
   const loading = status === 'loading';
   useEffect(() => {
@@ -299,6 +320,31 @@ const MainView = () => {
       });
   }
 
+  const onValidSubmit = () => {
+    console.log('Form is valid, proceeding to render.');
+    if (__DESKTOP__) {
+      actionStandalone(renderVideo)();
+    } else {
+      actionStandalone(renderVideoWeb, 250)();
+    }
+  };
+
+  const onInvalidSubmit = (errors: any) => {
+    console.log('Form is invalid:', errors);
+
+    // Find the first error message to display
+    const firstErrorField = Object.keys(errors)[0];
+    const firstError = errors[firstErrorField];
+    const errorMessage =
+      firstError?.message || 'Please fix the form errors before proceeding.';
+
+    toast({
+      title: 'Invalid Configuration',
+      message: `${firstErrorField}: ${errorMessage}`,
+      type: 'error',
+    });
+  };
+
   async function downloadVideoWeb() {
     if (!videoSrc) return;
 
@@ -314,70 +360,70 @@ const MainView = () => {
 
   return (
     <>
-      <Card className="mx-auto select-none">
-        <CardHeader>
-          {!__DESKTOP__ && <CardTitle>Generate Text Cut Match</CardTitle>}
-          <CardDescription className="w-[70%] m-auto">
-            This tool generates a video with text cut matches based on the
-            provided snippets. Change the settings below to customize the
-            output.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto rounded-lg p-4">
-          <ConfigForm />
-        </CardContent>
+      <FormProvider {...methods}>
+        <form onSubmit={methods.handleSubmit(onValidSubmit, onInvalidSubmit)}>
+          <Card className="mx-auto select-none">
+            <CardHeader>
+              {!__DESKTOP__ && <CardTitle>Generate Text Cut Match</CardTitle>}
+              <CardDescription className="w-[70%] m-auto">
+                This tool generates a video with text cut matches based on the
+                provided snippets. Change the settings below to customize the
+                output.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto rounded-lg p-4">
+              <ConfigForm />
+            </CardContent>
 
-        <CardFooter className="m-auto h-[100px]">
-          <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-sm bg-white/10 w-fit p-2 px-4 rounded-2xl">
-            <Button
-              variant="outline"
-              className="max-w-sm cursor-pointer"
-              disabled={loading}
-              onClick={
-                __DESKTOP__
-                  ? actionStandalone(renderVideo)
-                  : actionStandalone(renderVideoWeb, 250)
-              }
-            >
-              <Loader2Icon
-                className={clsx('animate-spin', {
-                  hidden: !loading,
-                })}
-              />
-              Render
-            </Button>
+            <CardFooter className="m-auto h-[100px]">
+              <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-sm bg-white/10 w-fit p-2 px-4 rounded-2xl">
+                <Button
+                  variant="outline"
+                  className="max-w-sm cursor-pointer"
+                  disabled={loading}
+                  type="submit"
+                >
+                  <Loader2Icon
+                    className={clsx('animate-spin', {
+                      hidden: !loading,
+                    })}
+                  />
+                  Render
+                </Button>
 
-            <Button
-              variant="outline"
-              className="max-w-sm cursor-pointer"
-              title="Renders the first frame of the video"
-              disabled={loading}
-              onClick={
-                __DESKTOP__
-                  ? actionStandalone(renderPreview)
-                  : actionStandalone(renderPreviewWeb, 250)
-              }
-            >
-              <Loader2Icon
-                className={clsx('animate-spin', {
-                  hidden: !loading,
-                })}
-              />
-              Preview
-            </Button>
+                <Button
+                  variant="outline"
+                  className="max-w-sm cursor-pointer"
+                  title="Renders the first frame of the video"
+                  disabled={loading}
+                  onClick={
+                    __DESKTOP__
+                      ? actionStandalone(renderPreview)
+                      : actionStandalone(renderPreviewWeb, 250)
+                  }
+                >
+                  <Loader2Icon
+                    className={clsx('animate-spin', {
+                      hidden: !loading,
+                    })}
+                  />
+                  Preview
+                </Button>
 
-            <Button
-              variant="outline"
-              className="max-w-sm cursor-pointer"
-              disabled={loading}
-              onClick={() => setOpenDrawer(!openDrawer)}
-            >
-              <ArrowUp />
-              Open Drawer
-            </Button>
-          </div>
-        </CardFooter>
-      </Card>
+                <Button
+                  variant="outline"
+                  className="max-w-sm cursor-pointer"
+                  disabled={loading}
+                  onClick={() => setOpenDrawer(!openDrawer)}
+                >
+                  <ArrowUp />
+                  Open Drawer
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
+        </form>
+      </FormProvider>
       <Drawer>
         <PhotoProvider>
           <div className="m-auto">
