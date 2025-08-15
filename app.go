@@ -114,11 +114,18 @@ func (a *App) Run(config types.Config) types.RunResponse {
 		}
 		aiSnippets = snippets
 	} else {
-		fmt.Fprintf(os.Stderr, "Error: Unsupported provider '%s'. Supported providers are 'gemini' and 'openai'.\n", config.Provider)
-		return types.RunResponse{
-			Success: false,
-			Error:   fmt.Sprintf("Unsupported provider '%s'. Supported providers are 'gemini' and 'openai'.", config.Provider),
+		fmt.Fprintf(os.Stderr, "Using provider random snippets\n")
+		// Use dummy snippets for development
+		aiSnippets = getDummySnippets(config)
+
+		for i := 0; i < 5; i++ {
+			snippet := core.GenerateRandomTextSnippet(config)
+			aiSnippets = append(aiSnippets, snippet)
 		}
+		// return types.RunResponse{
+		// 	Success: false,
+		// 	Error:   fmt.Sprintf("Unsupported provider '%s'. Supported providers are 'gemini' and 'openai'.", config.Provider),
+		// }
 	}
 
 	// Auto-calculate font size if not specified explicitly
@@ -128,14 +135,16 @@ func (a *App) Run(config types.Config) types.RunResponse {
 
 	videoData, fPath, err := generateFrames(config, aiSnippets, *a)
 
+	// homeDir, err := os.UserHomeDir()
 	// save to user download dir
-	if config.OutputPath == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return types.RunResponse{Success: false, Error: err.Error()}
-		}
-		config.OutputPath = filepath.Join(homeDir, "Downloads", "output.mp4")
-	}
+	// if config.OutputPath == "" {
+	// 	if err != nil {
+	// 		return types.RunResponse{Success: false, Error: err.Error()}
+	// 	}
+	// 	config.OutputPath = filepath.Join(homeDir, "Downloads", "output.mp4")
+	// }
+
+	// config.OutputPath = filepath.Join(homeDir, ".textmatchcut", "output.mp4")
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

@@ -101,6 +101,39 @@ func generateUniqueFilename(prefix, extension string) string {
 	return fmt.Sprintf("%s_%s.%s", prefix, hex.EncodeToString(bytes), extension)
 }
 
+func parseHexColor(s string) (color.RGBA, error) {
+	s = strings.TrimPrefix(s, "#")
+	var c color.RGBA
+	c.A = 0xff // Default to fully opaque
+
+	// Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+	if len(s) == 3 {
+		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2]})
+	} else if len(s) == 4 {
+		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2], s[3], s[3]})
+	}
+
+	decoded, err := hex.DecodeString(s)
+	if err != nil {
+		return c, err
+	}
+
+	switch len(decoded) {
+	case 3: // RRGGBB
+		c.R = decoded[0]
+		c.G = decoded[1]
+		c.B = decoded[2]
+	case 4: // RRGGBBAA
+		c.R = decoded[0]
+		c.G = decoded[1]
+		c.B = decoded[2]
+		c.A = decoded[3]
+	default:
+		return c, fmt.Errorf("invalid hex color string length: %d", len(decoded))
+	}
+	return c, nil
+}
+
 // Create text image frame
 func createTextImageFrame(config types.Config, snippet types.TextSnippet, highlightCenterX, highlightCenterY float64) (image.Image, error) {
 	// Create context
@@ -121,18 +154,8 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, highli
 
 		dc.DrawImage(backgroundImage, 0, 0)
 	} else {
-
-		bgColor := color.RGBA{
-			R: config.BackgroundColor[0],
-			G: config.BackgroundColor[1],
-			B: config.BackgroundColor[2],
-			A: config.BackgroundColor[3],
-		}
-
-		// Set background
-		dc.SetRGBA255(int(bgColor.R), int(bgColor.G), int(bgColor.B), int(bgColor.A))
+		dc.SetHexColor(config.BackgroundColor)
 		dc.Clear()
-
 	}
 
 	// try to center the text
@@ -140,21 +163,6 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, highli
 		float64(config.Width/2-int(highlightCenterX)),
 		float64(config.Height/2-int(highlightCenterY)),
 	)
-	// Parse colors
-
-	textColor := color.RGBA{
-		R: config.TextColor[0],
-		G: config.TextColor[1],
-		B: config.TextColor[2],
-		A: config.TextColor[3],
-	}
-
-	highlightColor := color.RGBA{
-		R: config.HighlightColor[0],
-		G: config.HighlightColor[1],
-		B: config.HighlightColor[2],
-		A: config.HighlightColor[3],
-	}
 
 	// Load font
 	ttfFont, err := loadFontBase64(config.Font)
@@ -176,7 +184,8 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, highli
 	startY := (float64(config.Height) - totalHeight) / 2
 
 	// Draw text lines
-	dc.SetRGBA255(int(textColor.R), int(textColor.G), int(textColor.B), int(textColor.A))
+	// dc.SetRGBA255(int(textColor.R), int(textColor.G), int(textColor.B), int(textColor.A))
+	dc.SetHexColor(config.TextColor)
 
 	for i, line := range snippet.Lines {
 		y := startY + float64(i)*lineHeight
@@ -201,12 +210,14 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, highli
 
 				// Draw highlight rectangle
 				padding := float64(config.FontSize) * 0.1
-				dc.SetRGBA255(int(highlightColor.R), int(highlightColor.G), int(highlightColor.B), int(highlightColor.A))
+				// dc.SetRGBA255(int(highlightColor.R), int(highlightColor.G), int(highlightColor.B), int(highlightColor.A))
+				dc.SetHexColor(config.HighlightColor)
 				dc.DrawRectangle(highlightX-padding, y-padding, highlightWidth+2*padding, lineHeight+2*padding)
 				dc.Fill()
 
 				// Draw text parts
-				dc.SetRGBA255(int(textColor.R), int(textColor.G), int(textColor.B), int(textColor.A))
+				// dc.SetRGBA255(int(textColor.R), int(textColor.G), int(textColor.B), int(textColor.A))
+				dc.SetHexColor(config.TextColor)
 
 				// Draw prefix
 				if prefix != "" {

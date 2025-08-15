@@ -1,14 +1,33 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import useAppContext from '@/store';
 import { useState } from 'react';
 import { OpenURL } from '../../wailsjs/go/main/App';
+import { useFormContext } from 'react-hook-form';
+import { cn } from '@/lib/utils';
+import {
+  DEFAULT_SUGGESTED_GEMINI_MODEL,
+  DEFAULT_SUGGESTED_OPENAI_MODEL,
+} from '@constants';
+
+const FieldError: React.FC<{ error?: any }> = ({ error }) => {
+  if (!error) return null;
+  return <p className="text-red-500 text-xs mt-1">{error.message as string}</p>;
+};
 
 const Prompt = () => {
-  const config = useAppContext(s => s.config);
-  const setConfig = useAppContext(s => s.setConfig);
-
+  const {
+    control,
+    register,
+    formState: { errors },
+    setValue,
+    getValues,
+    watch,
+  } = useFormContext();
+  const config = getValues();
+  const { AIEnabled } = watch();
+  // const config = useAppContext(s => s.config);
+  // const setConfig = useAppContext(s => s.setConfig);
   const [promptText, setPromptText] = useState(
     "Respond with 5 different text snippets with the highlighted text '$HighlightedText'. Each snippet should have between $MinLines and $MaxLines lines. Make sure that the highlighted text is not always at the start but random"
   );
@@ -31,24 +50,27 @@ const Prompt = () => {
   return (
     <div className="max-w-[600px] m-auto my-5">
       <Tabs
-        defaultValue={config.AIEnabled ? config.Provider : 'random'}
+        // defaultValue={config.AIEnabled ? config.Provider : 'random'}
+        defaultValue={'random'}
         onValueChange={value => {
-          setConfig(prevConfig => ({
-            ...prevConfig,
-            ...(value === 'gemini'
-              ? {
-                  AIEnabled: true,
-                  Provider: 'gemini',
-                  Model: 'gemini-2.5-flash',
-                }
-              : value === 'openai'
-              ? {
-                  AIEnabled: true,
-                  Provider: 'openai',
-                  Model: 'gpt-3.5-turbo',
-                }
-              : { AIEnabled: false, Provider: '', Model: '' }),
-          }));
+          switch (value) {
+            case 'random':
+              setValue('AIEnabled', false);
+              setValue('Provider', '');
+              setValue('Model', '');
+              break;
+            case 'gemini':
+            case 'openai':
+              setValue('AIEnabled', true);
+              setValue('Provider', value);
+              setValue(
+                'Model',
+                value === 'gemini'
+                  ? DEFAULT_SUGGESTED_GEMINI_MODEL
+                  : DEFAULT_SUGGESTED_OPENAI_MODEL
+              );
+              break;
+          }
         }}
       >
         <TabsList className="m-auto">
@@ -76,31 +98,28 @@ const Prompt = () => {
             <div className="flex gap-4 items-center align-center justify-center">
               <div>
                 <Label htmlFor="gemini-model">Gemini Model</Label>
+
                 <Input
                   id="gemini-model"
-                  placeholder="e.g., gemini-1.5-flash"
-                  value={config?.Model || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      Model: e.target.value,
-                    }))
-                  }
+                  placeholder="e.g., gemini-2.5-flash"
+                  {...register('Model', {
+                    required: 'Model is required',
+                  })}
+                  className={cn({ 'border-red-500': errors.Model })}
                 />
+                <FieldError error={errors.Model} />
               </div>
               <div>
                 <Label htmlFor="gemini-api-key">API key</Label>
                 <Input
                   id="gemini-api-key"
                   placeholder="Enter your Gemini API key"
-                  value={config?.ApiKey || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      ApiKey: e.target.value,
-                    }))
-                  }
+                  {...register('ApiKey', {
+                    required: 'API key is required',
+                  })}
+                  className={cn({ 'border-red-500': errors.ApiKey })}
                 />
+                <FieldError error={errors.ApiKey} />
               </div>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
@@ -131,37 +150,37 @@ const Prompt = () => {
             <div className="w-full flex gap-4 items-center align-center justify-center">
               <div>
                 <Label htmlFor="openai-model">OpenAI Model</Label>
+
                 <Input
                   id="openai-model"
                   placeholder="e.g., gpt-4o, gpt-3.5-turbo"
-                  value={config?.Model || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      Model: e.target.value,
-                    }))
-                  }
+                  {...register('Model', {
+                    required: 'Model is required',
+                  })}
+                  className={cn({ 'border-red-500': errors.Model })}
                 />
+
+                <FieldError error={errors.Model} />
               </div>
               <div>
                 <Label htmlFor="openai-api-key">API key</Label>
+
                 <Input
                   id="openai-api-key"
                   placeholder="Enter your OpenAI API key"
-                  value={config?.ApiKey || ''}
-                  onChange={e =>
-                    setConfig(prevConfig => ({
-                      ...prevConfig,
-                      ApiKey: e.target.value,
-                    }))
-                  }
+                  {...register('ApiKey', {
+                    required: 'API key is required',
+                  })}
+                  className={cn({ 'border-red-500': errors.ApiKey })}
                 />
+
+                <FieldError error={errors.ApiKey} />
               </div>
             </div>
           </div>
         </TabsContent>
       </Tabs>
-      {config.AIEnabled && (
+      {AIEnabled ? (
         <>
           <div className="mt-4">
             <Label htmlFor="openai-prompt">Prompt Template</Label>
@@ -185,7 +204,7 @@ const Prompt = () => {
             </div>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 };

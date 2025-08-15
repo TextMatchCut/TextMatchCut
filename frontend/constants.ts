@@ -1,27 +1,24 @@
 import { BlurType, Config } from '@types';
 // import { types} from 'wailsjs/go//models';
+
+export const FONT_OPTIONS = [
+  'Roboto-Italic',
+  'Roboto-Black',
+  'Roboto-BlackItalic',
+  'Roboto-Condensed',
+  'Roboto-Light',
+  'Minecraft',
+];
+
 export const DEFAULT_WIDTH = 1920;
 export const DEFAULT_HEIGHT = 1080;
 export const DEFAULT_FPS = 3;
 export const DEFAULT_HIGHLIGHTED_TEXT = 'Web Dev';
-export const DEFAULT_HIGHLIGHT_COLOR = [255, 255, 0, 255] as [
-  number,
-  number,
-  number,
-  number
-]; // yellow - RGBA format
-export const DEFAULT_TEXT_COLOR = [0, 0, 0, 255] as [
-  number,
-  number,
-  number,
-  number
-]; // black - RGBA format
-export const DEFAULT_BACKGROUND_COLOR = [255, 255, 255, 255] as [
-  number,
-  number,
-  number,
-  number
-]; // white - RGBA format
+
+export const DEFAULT_HIGHLIGHT_COLOR = '#ffff00';
+export const DEFAULT_TEXT_COLOR = '#000000';
+export const DEFAULT_BACKGROUND_COLOR = '#ffffff';
+
 export const DEFAULT_BLUR_TYPE = BlurType.Horizontal;
 export const DEFAULT_BLUR_ANGLE = 45.0;
 export const DEFAULT_BLUR_RADIUS = 5.0;
@@ -30,6 +27,9 @@ export const DEFAULT_MIN_LINES = 5;
 export const DEFAULT_MAX_LINES = 10;
 export const DEFAULT_VERTICAL_SPREAD = 1.5;
 export const DEFAULT_FEATHER = 0.5;
+
+export const DEFAULT_SUGGESTED_GEMINI_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_SUGGESTED_OPENAI_MODEL = 'gpt-3.5-turbo';
 
 export const DEFAULT_CONFIG = {
   Width: DEFAULT_WIDTH,
@@ -47,8 +47,7 @@ export const DEFAULT_CONFIG = {
   MaxLines: DEFAULT_MAX_LINES,
   VerticalSpread: DEFAULT_VERTICAL_SPREAD,
   Feather: DEFAULT_FEATHER,
-  OutputPath: '',
-  Font: '',
+  Font: 'Roboto-Italic',
   BackgroundImage: '',
   AIEnabled: false,
   ApiKey: '',

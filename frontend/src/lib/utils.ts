@@ -139,8 +139,7 @@ export const readAsRawBase64 = (f: File | undefined) => {
   );
 };
 
-export const serializeState = () => {
-  const { config } = useAppContext.getState();
+export const serializeState = (config: Config) => {
   /*
    Api key is sensitive and should not be serialized
    Background image, Sfx and Font are high in size and may go beyond localStorage limits
@@ -168,4 +167,29 @@ export const serializeState = () => {
     config: filteredConfigState,
     __APP_VERSION__,
   });
+};
+
+type SetConfig = Config | ((config: Config) => Config);
+
+const parseState = () => {
+  try {
+    let app = localStorage.getItem('app');
+    if (app) {
+      app = JSON.parse(app);
+      if (!app || typeof app !== 'object') return DEFAULT_CONFIG;
+      const typedConfig = app as {
+        config: Config;
+        __APP_VERSION__: string;
+      };
+      if (typedConfig.__APP_VERSION__ !== __APP_VERSION__) {
+        console.warn('App version mismatch. Resetting config to default.');
+        return DEFAULT_CONFIG;
+      }
+      return typedConfig.config || DEFAULT_CONFIG;
+    }
+    return DEFAULT_CONFIG;
+  } catch (error) {
+    console.error('Failed to parse app config from localStorage:', error);
+    return DEFAULT_CONFIG;
+  }
 };

@@ -8,15 +8,30 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import clsx from 'clsx';
-import useAppContext from '@/store';
-import React, { useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
+import { useState } from 'react';
+import { useFormContext, Controller } from 'react-hook-form';
+import { cn } from '@/lib/utils';
 
 const Resolution = () => {
+  const {
+    control,
+    formState: { errors },
+    watch,
+    setValue,
+  } = useFormContext();
+
   const [custom, setCustom] = useState(false);
-  const [config, setConfig] = useAppContext(
-    useShallow(state => [state.config, state.setConfig])
-  );
+
+  // Watch the current width and height values
+  const currentWidth = watch('Width');
+  const currentHeight = watch('Height');
+
+  // Determine current resolution preset
+  const getCurrentResolution = () => {
+    const resolution = `${currentWidth}x${currentHeight}`;
+    const presets = ['1920x1080', '1080x1920', '1024x768', '1080x1080'];
+    return presets.includes(resolution) ? resolution : 'custom';
+  };
 
   function handleChangeWidthHeight(value: string) {
     if (value === 'custom') {
@@ -25,28 +40,8 @@ const Resolution = () => {
     }
     setCustom(false);
     const [w, h] = value.split('x');
-    setConfig({
-      ...config,
-      Width: parseInt(w),
-      Height: parseInt(h),
-    });
-  }
-
-  function setWidth(e: React.ChangeEvent<HTMLInputElement>) {
-    const width = parseInt(e.target.value);
-    if (isNaN(width)) return;
-    setConfig({
-      ...config,
-      Width: width,
-    });
-  }
-  function setHeight(e: React.ChangeEvent<HTMLInputElement>) {
-    const height = parseInt(e.target.value);
-    if (isNaN(height)) return;
-    setConfig({
-      ...config,
-      Height: height,
-    });
+    setValue('Width', parseInt(w));
+    setValue('Height', parseInt(h));
   }
 
   return (
@@ -56,7 +51,7 @@ const Resolution = () => {
       </Label>
       <div className="flex items-center space-x-2 gap-4 mt-5">
         <Select
-          value={custom ? 'custom' : `${config.Width}x${config.Height}`}
+          value={getCurrentResolution()}
           onValueChange={handleChangeWidthHeight}
         >
           <SelectTrigger className="w-[180px]">
@@ -78,12 +73,18 @@ const Resolution = () => {
           })}
         >
           <div className="flex items-center gap-1">
-            <Input
-              type="number"
-              id="width"
-              placeholder="Width"
-              value={config.Width}
-              onChange={setWidth}
+            <Controller
+              control={control}
+              name="Width"
+              render={({ field }) => (
+                <Input
+                  type="number"
+                  id="width"
+                  placeholder="Width"
+                  {...field}
+                  className={cn({ 'border-red-500': errors.Width })}
+                />
+              )}
             />
             <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
               Width
@@ -91,12 +92,18 @@ const Resolution = () => {
           </div>
           <div>X</div>
           <div className="flex items-center gap-1">
-            <Input
-              type="number"
-              id="height"
-              placeholder="Height"
-              value={config.Height}
-              onChange={setHeight}
+            <Controller
+              control={control}
+              name="Height"
+              render={({ field }) => (
+                <Input
+                  type="number"
+                  id="height"
+                  placeholder="Height"
+                  {...field}
+                  className={cn({ 'border-red-500': errors.Height })}
+                />
+              )}
             />
             <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
               Height
@@ -104,40 +111,38 @@ const Resolution = () => {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Input
-            className="max-w-[70px]"
-            type="number"
-            id="fps"
-            placeholder="FPS"
-            value={config.FPS}
-            onChange={e => {
-              const fps = parseInt(e.target.value);
-              if (isNaN(fps)) return;
-              setConfig({
-                ...config,
-                FPS: fps,
-              });
-            }}
+          <Controller
+            control={control}
+            name="FPS"
+            render={({ field }) => (
+              <Input
+                type="number"
+                id="fps"
+                placeholder="FPS"
+                {...field}
+                className={cn('max-w-[70px]', { 'border-red-500': errors.FPS })}
+              />
+            )}
           />
           <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
             FPS
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <Input
-            className="max-w-[70px]"
-            type="number"
-            id="duration"
-            placeholder="Duration (s)"
-            value={config.Duration}
-            onChange={e => {
-              const duration = parseInt(e.target.value);
-              if (isNaN(duration)) return;
-              setConfig({
-                ...config,
-                Duration: duration,
-              });
-            }}
+          <Controller
+            control={control}
+            name="Duration"
+            render={({ field }) => (
+              <Input
+                type="number"
+                id="duration"
+                placeholder="Duration (s)"
+                {...field}
+                className={cn('max-w-[70px]', {
+                  'border-red-500': errors.Duration,
+                })}
+              />
+            )}
           />
           <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
             Duration (s)
