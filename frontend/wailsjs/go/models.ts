@@ -28,6 +28,7 @@ export namespace types {
 	    Feather: number;
 	    Sfx: string;
 	    BackgroundImpl: string;
+	    HighlightRadius: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -62,6 +63,7 @@ export namespace types {
 	        this.Feather = source["Feather"];
 	        this.Sfx = source["Sfx"];
 	        this.BackgroundImpl = source["BackgroundImpl"];
+	        this.HighlightRadius = source["HighlightRadius"];
 	    }
 	}
 	export class GetDefaultAssetsPathResponse {

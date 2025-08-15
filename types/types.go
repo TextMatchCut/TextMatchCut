@@ -64,7 +64,8 @@ type Config struct {
 	SoundEffectPath string
 	Feather         float64
 	Sfx             string
-	BackgroundImpl  string // "image" or "solid"
+	BackgroundImpl  string  // "image" or "solid"
+	HighlightRadius float64 // Radius for highlight effect
 }
 
 type TextSnippet struct {

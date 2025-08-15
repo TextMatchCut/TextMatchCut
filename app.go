@@ -153,10 +153,16 @@ func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
 		snippet := core.GenerateRandomTextSnippet(config)
 		snippets = append(snippets, snippet)
 	}
+	var highlightRadius float64
+	if config.HighlightRadius != 0 {
+		highlightRadius = config.HighlightRadius
+	} else {
+		highlightRadius = float64(config.FontSize * len(config.HighlightedText))
+	}
 
 	finalImage, err := core.GenerateFrame(1, config, snippets,
 		// TODO: need to work on this
-		float64(config.FontSize*len(config.HighlightedText)),
+		highlightRadius,
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating preview: %v\n", err)
@@ -284,6 +290,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 		fmt.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
 	}
+	log.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
 
 	totalFrames := config.FPS * config.Duration
 
@@ -299,8 +306,13 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 		fmt.Printf("Generating %d frames...\n", totalFrames)
 	}
 
-	//no need to recalculate highlight width every frame in the loop
-	highlightRadius := float64(config.FontSize * len(config.HighlightedText))
+	var highlightRadius float64
+	if config.HighlightRadius != 0 {
+		highlightRadius = config.HighlightRadius
+	} else {
+		highlightRadius = float64(config.FontSize * len(config.HighlightedText))
+	}
+
 	if config.Verbose {
 		fmt.Printf("Highlight radius: %.2f\n", highlightRadius)
 	}
@@ -379,57 +391,58 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 	os.MkdirAll(fDir, 0755)
 
 	var cmd *exec.Cmd
-	if config.SoundEffectPath != "" {
-		if _, err := os.Stat(config.SoundEffectPath); os.IsNotExist(err) {
-			log.Printf("Warning: sound effect file not found at '%s', proceeding without sound.", config.SoundEffectPath)
-		} else {
-			// Build the complex filter graph for repeating the sound effect
-			var filterComplexParts []string
-			var amixInputs string
+	// if config.SoundEffectPath != "" {
+	// if _, err := os.Stat(config.SoundEffectPath); os.IsNotExist(err) {
+	// 	log.Printf("Warning: sound effect file not found at '%s', proceeding without sound.", config.SoundEffectPath)
+	// } else {
+	// Build the complex filter graph for repeating the sound effect
+	var filterComplexParts []string
+	var amixInputs string
 
-			for i := 0; i < totalFrames; i++ {
-				delayMs := (i * 1000) / config.FPS
-				outputStream := fmt.Sprintf("a%d", i)
-				// [1:a] refers to the audio stream from the second input file (the sound effect)
-				filterComplexParts = append(filterComplexParts, fmt.Sprintf("[1:a]adelay=%d|%d[%s]", delayMs, delayMs, outputStream))
-				amixInputs += fmt.Sprintf("[%s]", outputStream)
-			}
-
-			amixFilter := fmt.Sprintf("%samix=inputs=%d[a]", amixInputs, totalFrames)
-			filterComplexParts = append(filterComplexParts, amixFilter)
-			filterComplex := strings.Join(filterComplexParts, ";")
-			cmd = exec.Command("ffmpeg",
-				"-y", // Overwrite output file
-				"-framerate", strconv.Itoa(config.FPS),
-				"-i", filepath.Join(tempDir, "frame_%05d.png"), // Video input
-				// "-i", config.SoundEffectPath, // Audio input
-				"-i", "shutter.wav", // Audio input
-				"-filter_complex", filterComplex,
-				"-map", "0:v", // Map video from first input
-				"-map", "[a]", // Map audio from filtergraph
-				"-c:v", "libx264",
-				"-preset", "medium",
-				"-pix_fmt", "yuv420p",
-				"-r", strconv.Itoa(config.FPS),
-				"-shortest", // End encoding when the shortest stream (video) ends
-				outputPath,
-			)
-		}
+	for i := 0; i < totalFrames; i++ {
+		delayMs := (i * 1000) / config.FPS
+		outputStream := fmt.Sprintf("a%d", i)
+		// [1:a] refers to the audio stream from the second input file (the sound effect)
+		filterComplexParts = append(filterComplexParts, fmt.Sprintf("[1:a]adelay=%d|%d[%s]", delayMs, delayMs, outputStream))
+		amixInputs += fmt.Sprintf("[%s]", outputStream)
 	}
 
-	if cmd == nil {
-		// Original FFmpeg command or fallback
-		cmd = exec.Command("ffmpeg",
-			"-y", // Overwrite output file
-			"-framerate", strconv.Itoa(config.FPS),
-			"-i", filepath.Join(tempDir, "frame_%05d.png"),
-			"-c:v", "libx264",
-			"-preset", "medium",
-			"-pix_fmt", "yuv420p",
-			"-r", strconv.Itoa(config.FPS),
-			outputPath,
-		)
-	}
+	amixFilter := fmt.Sprintf("%samix=inputs=%d[a]", amixInputs, totalFrames)
+	filterComplexParts = append(filterComplexParts, amixFilter)
+	filterComplex := strings.Join(filterComplexParts, ";")
+	shutterPath := filepath.Join(os.TempDir(), "textmatchcut", "sfx", "shutter.wav")
+
+	cmd = exec.Command("ffmpeg",
+		"-y", // Overwrite output file
+		"-framerate", strconv.Itoa(config.FPS),
+		"-i", filepath.Join(tempDir, "frame_%05d.png"), // Video input
+		"-i", shutterPath, // Audio input
+		"-filter_complex", filterComplex,
+		"-map", "0:v", // Map video from first input
+		"-map", "[a]", // Map audio from filtergraph
+		"-c:v", "libx264",
+		"-preset", "medium",
+		"-pix_fmt", "yuv420p",
+		"-r", strconv.Itoa(config.FPS),
+		"-shortest", // End encoding when the shortest stream (video) ends
+		outputPath,
+	)
+	// }
+	// }
+
+	// if cmd == nil {
+	// 	// Original FFmpeg command or fallback
+	// 	cmd = exec.Command("ffmpeg",
+	// 		"-y", // Overwrite output file
+	// 		"-framerate", strconv.Itoa(config.FPS),
+	// 		"-i", filepath.Join(tempDir, "frame_%05d.png"),
+	// 		"-c:v", "libx264",
+	// 		"-preset", "medium",
+	// 		"-pix_fmt", "yuv420p",
+	// 		"-r", strconv.Itoa(config.FPS),
+	// 		outputPath,
+	// 	)
+	// }
 
 	if config.Verbose {
 		fmt.Printf("Running FFmpeg command: %s\n", strings.Join(cmd.Args, " "))

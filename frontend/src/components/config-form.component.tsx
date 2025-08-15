@@ -138,6 +138,21 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           />
         </div>
         <div className="flex gap-2">
+          <Label htmlFor="highlight-radius">Highlight Radius</Label>
+          <Input
+            className="w-20"
+            id="highlight-radius"
+            type="number"
+            value={config.HighlightRadius}
+            onChange={e =>
+              setConfig({
+                ...config,
+                HighlightRadius: parseInt(e.target.value),
+              })
+            }
+          />
+        </div>
+        <div className="flex gap-2">
           <Label htmlFor="max-lines">Max Lines</Label>
           <Input
             className="w-20"

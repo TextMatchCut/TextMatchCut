@@ -59,6 +59,7 @@ export const DEFAULT_CONFIG = {
   Duration: 2,
   Sfx: 'sfx/shutter.wav',
   BackgroundImpl: 'image', // 'image' or 'solid'
+  HighlightRadius: 0,
 } as Config;
 
 export const REPO_URL = 'https://github.com/uncor3/text-match-cut';

@@ -63,6 +63,8 @@ const Resolution = () => {
             <SelectValue placeholder="Orientation" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="3840x2160">3840x2160 [16:9]</SelectItem>
+            <SelectItem value="2560x1440">2560x1440 [16:9]</SelectItem>
             <SelectItem value="1920x1080">1920x1080 [16:9]</SelectItem>
             <SelectItem value="1080x1920">1080x1920 [9:16]</SelectItem>
             <SelectItem value="1024x768">1024x768 [4:3]</SelectItem>
