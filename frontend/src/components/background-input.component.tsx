@@ -5,15 +5,12 @@ import { useEffect, useRef, useState } from 'react';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import useAppContext from '@/store';
-import { rgbaToHex, hexToRgba } from '@/lib/utils';
 import { Replace } from 'lucide-react';
-import { DEFAULT_BACKGROUND_COLOR } from '@constants';
+import { useFormContext } from 'react-hook-form';
 
 const BackgroundInput = () => {
   const [src, setSrc] = useState<string>('/img/bg-1.jpg');
-  const config = useAppContext(s => s.config);
-  const setConfig = useAppContext(s => s.setConfig);
+  const { setValue, register } = useFormContext();
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -26,10 +23,7 @@ const BackgroundInput = () => {
       reader.onload = e => {
         const base64Font = e.target?.result as string;
         setSrc(base64Font);
-        setConfig(prevConfig => ({
-          ...prevConfig,
-          BackgroundImage: base64Font.split(',')[1],
-        }));
+        setValue('BackgroundImage', base64Font.split(',')[1]);
       };
       reader.readAsDataURL(file);
     }
@@ -48,10 +42,7 @@ const BackgroundInput = () => {
         reader.readAsDataURL(blob);
       });
       setSrc(base64Image);
-      setConfig(prevConfig => ({
-        ...prevConfig,
-        BackgroundImage: base64Image.split(',')[1],
-      }));
+      setValue('BackgroundImage', base64Image.split(',')[1]);
     };
     init();
   }, []);
@@ -63,16 +54,9 @@ const BackgroundInput = () => {
         defaultValue="image"
         onValueChange={value => {
           if (value === 'image') {
-            return setConfig(prevConfig => ({
-              ...prevConfig,
-
-              BackgroundImpl: 'image',
-            }));
+            return setValue('BackgroundImpl', 'image');
           }
-          return setConfig(prevConfig => ({
-            ...prevConfig,
-            BackgroundImpl: 'solid',
-          }));
+          return setValue('BackgroundImpl', 'solid');
         }}
       >
         <TabsList>
@@ -122,16 +106,7 @@ const BackgroundInput = () => {
           <Input
             id="background-color"
             type="color"
-            value={rgbaToHex(
-              config.BackgroundColor as [number, number, number, number],
-              false
-            )}
-            onChange={e => {
-              setConfig({
-                ...config,
-                BackgroundColor: hexToRgba(e.target.value),
-              });
-            }}
+            {...register('BackgroundColor')}
           />
         </TabsContent>
       </Tabs>

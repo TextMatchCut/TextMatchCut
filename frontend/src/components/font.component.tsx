@@ -5,31 +5,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { useEffect, useRef, useState } from 'react';
-import useAppContext from '@/store';
 import { Label } from './ui/label';
-import { cn, readAsRawBase64 } from '@/lib/utils';
+import { readAsRawBase64 } from '@/lib/utils';
 import toast from '@/lib/toast';
-import { OpenURL } from '../../wailsjs/go/main/App';
+import { useFormContext } from 'react-hook-form';
+import { FONT_OPTIONS } from '@constants';
 
-const FONT_OPTIONS = [
-  'Roboto-Italic',
-  'Roboto-Black',
-  'Roboto-BlackItalic',
-  'Roboto-Condensed',
-  'Roboto-Light',
-  'Minecraft',
-];
 const SELECT_OPTION = 'Choose a font file';
 
 const Font = () => {
-  const config = useAppContext(s => s.config);
+  const { getValues, setValue } = useFormContext();
+  const config = getValues();
   const [fontOptions, setFontOptions] = useState(FONT_OPTIONS);
-  // TODO: use config.Font to set the initial font
-  const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0]);
-  const setConfig = useAppContext(s => s.setConfig);
-  const [isHovered, setIsHovered] = useState(false);
+  /* we need this state to show a readable font name */
+  const [selectedFont, setSelectedFont] = useState(config.Font);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchAndSetFont = async (font: string) => {
@@ -54,10 +44,7 @@ const Font = () => {
         type: 'error',
       });
     }
-    setConfig(prevConfig => ({
-      ...prevConfig,
-      Font: base64Font.raw,
-    }));
+    setValue('Font', base64Font.raw);
     setSelectedFont(font);
   };
   useEffect(() => {
@@ -89,10 +76,7 @@ const Font = () => {
           ...prev.filter(opt => FONT_OPTIONS.includes(opt)),
           fontName,
         ]);
-        setConfig(prevConfig => ({
-          ...prevConfig,
-          Font: base64Font,
-        }));
+        setValue('Font', base64Font);
       }
     };
     init();

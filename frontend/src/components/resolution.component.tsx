@@ -8,9 +8,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import clsx from 'clsx';
-import useAppContext from '@/store';
-import React, { useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
+import { useState } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 
@@ -23,9 +21,6 @@ const Resolution = () => {
   } = useFormContext();
 
   const [custom, setCustom] = useState(false);
-  const [config, setConfig] = useAppContext(
-    useShallow(state => [state.config, state.setConfig])
-  );
 
   // Watch the current width and height values
   const currentWidth = watch('Width');

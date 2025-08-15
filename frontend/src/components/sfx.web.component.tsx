@@ -21,9 +21,9 @@ const INITIAL_SFX_OPTIONS = [
 ];
 let cleanup: (() => void) | null = null;
 const Sfx = () => {
-  const config = useAppContext(s => s.config);
+  // const config = useAppContext(s => s.config);
   const [sfxOptions, setSfxOptions] = useState(INITIAL_SFX_OPTIONS);
-  const setConfig = useAppContext(s => s.setConfig);
+  // const setConfig = useAppContext(s => s.setConfig);
   const ffmpeg = useAppContext(s => s.ffmpeg);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const howlerInstance = useRef<Howl | null>(null);
@@ -114,7 +114,7 @@ const Sfx = () => {
 
     try {
       await changeSfx('wav', value, filePath);
-      setConfig(conf => ({ ...conf, Sfx: value }));
+      // setConfig(conf => ({ ...conf, Sfx: value }));
     } catch (error) {
       console.error('Error changing SFX:', error);
       toast({
@@ -141,7 +141,7 @@ const Sfx = () => {
         ...prev.filter(p => INITIAL_SFX_OPTIONS.includes(p)),
         name,
       ]);
-      setConfig(conf => ({ ...conf, Sfx: name }));
+      // setConfig(conf => ({ ...conf, Sfx: name }));
     } catch (error) {
       console.error('Error picking audio file:', error);
       toast({
@@ -158,7 +158,8 @@ const Sfx = () => {
         Sfx
       </Label>
       <div className="flex gap-4">
-        <Select value={config.Sfx} onValueChange={handleValueChange}>
+        {/* <Select value={config.Sfx} onValueChange={handleValueChange}> */}
+        <Select value={'sfx/shutter.wav'} onValueChange={handleValueChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select a sound effect" />
           </SelectTrigger>

@@ -11,9 +11,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Play } from 'lucide-react';
 import { Label } from './ui/label';
-import useAppContext from '@/store';
 import toast from '@/lib/toast';
 import { PickAudioFile } from '../../wailsjs/go/main/App';
+import { useFormContext } from 'react-hook-form';
+import { DEFAULT_CONFIG } from '@constants';
 
 const INITIAL_SFX_OPTIONS = [
   'sfx/shutter.wav',
@@ -22,11 +23,10 @@ const INITIAL_SFX_OPTIONS = [
 ];
 let cleanup: (() => void) | null = null;
 const Sfx = () => {
-  const config = useAppContext(s => s.config);
+  // const config = useAppContext(s => s.config);
+  const { setValue, watch } = useFormContext();
   const [sfxOptions, setSfxOptions] = useState(INITIAL_SFX_OPTIONS);
-  const setConfig = useAppContext(s => s.setConfig);
-  const setStatus = useAppContext(s => s.setStatus);
-  const [filePath, setFilePath] = useState<string | null>(null);
+  const value = watch('Sfx');
 
   const howlerInstance = useRef<Howl | null>(null);
 
@@ -72,11 +72,10 @@ const Sfx = () => {
   ) {
     cleanup?.();
 
-    // If a file is provided, set up cleanup to reset the file path and revoke the object URL
+    // If a file is provided, set up cleanup to revoke the object URL
     // this will run next time changeSfx is called
     if (file) {
       cleanup = () => {
-        setFilePath(null);
         URL.revokeObjectURL(src);
       };
     }
@@ -84,7 +83,7 @@ const Sfx = () => {
     if (!howlerInstance.current) {
       return;
     }
-    setConfig(conf => ({ ...conf, Sfx: name }));
+    setValue('Sfx', name);
     howlerInstance.current.unload();
     howlerInstance.current = new Howl({
       src: [src],
@@ -126,7 +125,7 @@ const Sfx = () => {
               .pop()!};base64,${res.audioData!}`,
             true
           );
-          setConfig(conf => ({ ...conf, Sfx: res.path! }));
+          setValue('Sfx', res.path!);
         }
         return;
       }
@@ -147,7 +146,7 @@ const Sfx = () => {
         Sfx
       </Label>
       <div className="flex gap-4">
-        <Select value={config.Sfx} onValueChange={handleValueChange}>
+        <Select value={value} onValueChange={handleValueChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select a sound effect" />
           </SelectTrigger>
@@ -166,7 +165,9 @@ const Sfx = () => {
       </div>
       <Button
         className="cursor-pointer mt-4"
-        onClick={() => {
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
           if (howlerInstance.current) {
             howlerInstance.current.play();
           }

@@ -38,33 +38,32 @@ type WasmInput struct {
 // }
 
 type Config struct {
-	Width           int
-	Height          int
-	FPS             int
-	Duration        int
-	HighlightedText string
-	HighlightColor  [4]uint8 // Changed from string to [4]uint8
-	TextColor       [4]uint8 // Changed from string to [4]uint8
-	BackgroundColor [4]uint8 // Changed from string to [4]uint8
-	BackgroundImage string   // base64 encoded image
-	BlurType        string
-	BlurRadius      float64
-	BlurAngle       float64 // New: for directional blur
-	FontSize        int
-	MinLines        int
-	MaxLines        int
-	VerticalSpread  float64
-	OutputPath      string
-	Font            string //base64
-	AIEnabled       bool
-	ApiKey          string
-	Model           string
-	Provider        string
-	Verbose         bool
-	SoundEffectPath string
-	Feather         float64
-	Sfx             string
-	BackgroundImpl  string // "image" or "solid"
+	Width           int     `json:"Width"`
+	Height          int     `json:"Height"`
+	FPS             int     `json:"FPS"`
+	Duration        int     `json:"Duration"`
+	HighlightedText string  `json:"HighlightedText"`
+	HighlightColor  string  `json:"HighlightColor"`
+	TextColor       string  `json:"TextColor"`
+	BackgroundColor string  `json:"BackgroundColor"`
+	BackgroundImage string  `json:"BackgroundImage"`
+	BlurType        string  `json:"BlurType"`
+	BlurRadius      float64 `json:"BlurRadius"`
+	BlurAngle       float64 `json:"BlurAngle"`
+	FontSize        int     `json:"FontSize"`
+	MinLines        int     `json:"MinLines"`
+	MaxLines        int     `json:"MaxLines"`
+	VerticalSpread  float64 `json:"VerticalSpread"`
+	Font            string  `json:"Font"`
+	AIEnabled       bool    `json:"AIEnabled"`
+	ApiKey          string  `json:"ApiKey,omitempty"`
+	Model           string  `json:"Model,omitempty"`
+	Provider        string  `json:"Provider,omitempty"`
+	Verbose         bool    `json:"Verbose,omitempty"`
+	SoundEffectPath string  `json:"SoundEffectPath,omitempty"`
+	Feather         float64 `json:"Feather"`
+	Sfx             string  `json:"Sfx"`
+	BackgroundImpl  string  `json:"BackgroundImpl"`
 }
 
 type TextSnippet struct {

@@ -24,26 +24,19 @@ import useAppContext from '@/store';
 import clsx from 'clsx';
 import 'react-photo-view/dist/react-photo-view.css';
 import Drawer from '@/components/drawer.component';
-import {
-  getDummySnippets,
-  loadWasmBackend,
-  loadFFmpeg,
-  serializeState,
-} from '@/lib/utils';
+import { getDummySnippets, loadWasmBackend, loadFFmpeg } from '@/lib/utils';
 import ConfigForm from './components/config-form.component';
 import toast from './lib/toast';
 import { EventsOn, EventsOff } from '../wailsjs/runtime';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { configSchema } from '@/lib/validation';
-import { types } from '../wailsjs/go/models';
+import { DEFAULT_CONFIG } from '@constants';
 
 const MainView = () => {
   const {
-    config,
     openDrawer,
     setOpenDrawer,
-    setConfig,
     setElapsedTime,
     setStatus,
     elapsedTime,
@@ -56,22 +49,13 @@ const MainView = () => {
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [videoOutputPath, setVideoOutputPath] = useState<string | null>(null);
 
-  const methods = useForm<types.Config>({
+  const methods = useForm({
     resolver: zodResolver(configSchema),
-    defaultValues: config,
+    defaultValues: { ...DEFAULT_CONFIG, Type: 'render' as const },
     mode: 'onChange',
   });
 
-  const { watch } = methods;
-
-  // This effect keeps your global zustand store in sync with the form state,
-  // so real-time previews (like the prompt preview) continue to work.
-  useEffect(() => {
-    const subscription = watch(values => {
-      setConfig(prev => ({ ...prev, ...values }));
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, setConfig]);
+  const { getValues, setValue } = methods;
 
   const loading = status === 'loading';
   useEffect(() => {
@@ -125,13 +109,13 @@ const MainView = () => {
       setStatus('ready');
     }
     __DESKTOP__ ? init() : initWeb();
-    let saveInterval = setInterval(() => {
-      console.log('Saving app state to localStorage...');
-      localStorage.setItem('app', serializeState());
-    }, 10000);
+    // let saveInterval = setInterval(() => {
+    //   console.log('Saving app state to localStorage...');
+    //   localStorage.setItem('app', serializeState());
+    // }, 10000);
 
     return () => {
-      clearInterval(saveInterval);
+      // clearInterval(saveInterval);
       if (preview) {
         URL.revokeObjectURL(preview);
       }
@@ -188,7 +172,7 @@ const MainView = () => {
       setVideoSrc(null);
     }
     try {
-      await renderFrame(config);
+      await renderFrame(getValues());
     } catch (err) {
       setStatus('error');
       toast({
@@ -212,7 +196,7 @@ const MainView = () => {
     try {
       const input = {
         frameNum: 1,
-        config,
+        config: getValues(),
         aiSnippets: getDummySnippets(),
         highlightRadius: 400.0,
         totalFrames: 1,
@@ -232,7 +216,7 @@ const MainView = () => {
     try {
       const input = {
         frameNum: -1,
-        config,
+        config: getValues(),
         aiSnippets: getDummySnippets(),
         highlightRadius: 400.0,
         totalFrames: 1,
@@ -290,8 +274,12 @@ const MainView = () => {
     }
   }
 
+  const handlePreviewClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    setValue('Type', 'preview');
+  };
+
   async function renderVideo() {
-    console.log('Rendering video with config:', config);
+    console.log('Rendering video with config:', getValues());
     EventsOn('frame', args => {
       const { frameNum, totalFrames, frameData } = args;
       const p = (frameNum / totalFrames) * 100;
@@ -302,7 +290,8 @@ const MainView = () => {
       URL.revokeObjectURL(videoSrc);
       setVideoSrc(null);
     }
-    return await Run(config)
+
+    return await Run(getValues())
       .then(async res => {
         if (!res.success) {
           return toast({
@@ -321,7 +310,16 @@ const MainView = () => {
   }
 
   const onValidSubmit = () => {
-    console.log('Form is valid, proceeding to render.');
+    const config = getValues();
+    console.log('Form is valid, proceeding with config:', config);
+    if (config.Type === 'preview') {
+      if (__DESKTOP__) {
+        actionStandalone(renderPreview)();
+      } else {
+        actionStandalone(renderPreviewWeb, 250)();
+      }
+      return;
+    }
     if (__DESKTOP__) {
       actionStandalone(renderVideo)();
     } else {
@@ -350,7 +348,8 @@ const MainView = () => {
 
     const link = document.createElement('a');
     link.href = videoSrc;
-    link.download = `output-${config.HighlightedText}-${Date.now()}.mp4`;
+    // FIXME: if highlighted text changes,it is going to reflect here
+    link.download = `output-${getValues().HighlightedText}-${Date.now()}.mp4`;
     link.click();
   }
 
@@ -381,6 +380,9 @@ const MainView = () => {
                   variant="outline"
                   className="max-w-sm cursor-pointer"
                   disabled={loading}
+                  onClick={() => {
+                    setValue('Type', 'render' as const);
+                  }}
                   type="submit"
                 >
                   <Loader2Icon
@@ -396,11 +398,8 @@ const MainView = () => {
                   className="max-w-sm cursor-pointer"
                   title="Renders the first frame of the video"
                   disabled={loading}
-                  onClick={
-                    __DESKTOP__
-                      ? actionStandalone(renderPreview)
-                      : actionStandalone(renderPreviewWeb, 250)
-                  }
+                  type="submit"
+                  onClick={handlePreviewClick}
                 >
                   <Loader2Icon
                     className={clsx('animate-spin', {
@@ -414,6 +413,7 @@ const MainView = () => {
                   variant="outline"
                   className="max-w-sm cursor-pointer"
                   disabled={loading}
+                  type="button"
                   onClick={() => setOpenDrawer(!openDrawer)}
                 >
                   <ArrowUp />
