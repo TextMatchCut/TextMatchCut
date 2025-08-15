@@ -28,6 +28,7 @@ export namespace types {
 	    Sfx: string;
 	    BackgroundImpl: string;
 	    HighlightRadius: number;
+	    Type: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -62,6 +63,7 @@ export namespace types {
 	        this.Sfx = source["Sfx"];
 	        this.BackgroundImpl = source["BackgroundImpl"];
 	        this.HighlightRadius = source["HighlightRadius"];
+	        this.Type = source["Type"];
 	    }
 	}
 	export class GetDefaultAssetsPathResponse {

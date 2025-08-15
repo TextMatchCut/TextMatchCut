@@ -27,7 +27,7 @@ export const configSchema = z
       .number()
       .min(1, 'FPS must be at least 1.')
       .max(60, 'FPS cannot exceed 60.'),
-    Duration: z.number(),
+    Duration: z.number().min(1, 'Duration must be at least 1 second.'),
     FontSize: z
       .number()
       .min(8, 'Font size must be at least 8.')

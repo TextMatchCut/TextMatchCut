@@ -16,6 +16,7 @@ import BackgroundInput from './background-input.component';
 import Font from './font.component';
 import Prompt from './prompt.component';
 import { useFormContext, Controller } from 'react-hook-form';
+import { useEffect } from 'react';
 
 // Error display component for reusability
 const FieldError: React.FC<{ error?: any }> = ({ error }) => {
@@ -28,23 +29,35 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
     register,
     control,
     formState: { errors },
+    watch,
+    setValue,
   } = useFormContext();
+
+  const highlightedText = watch('HighlightedText');
+  const fontSize = watch('FontSize');
+
+  useEffect(() => {
+    // needed because HighlightRadius should be related to HighlightedText length and fontSize
+    if (highlightedText && typeof fontSize === 'number' && fontSize > 0) {
+      const newRadius = fontSize * highlightedText.length;
+      setValue('HighlightRadius', newRadius, { shouldValidate: true });
+    }
+  }, [highlightedText, fontSize]);
 
   return (
     <>
       <div className="flex gap-4 justify-between flex-col md:flex-row">
         <div className="flex gap-4 w-full">
           <div>
-            <Label htmlFor="highlighted-text">Highlighted Text</Label>
+            <Label>Highlighted Text</Label>
             <Input
-              id="highlighted-text"
               {...register('HighlightedText')}
               className={cn({ 'border-red-500': errors.HighlightedText })}
             />
             <FieldError error={errors.HighlightedText} />
           </div>
           <div>
-            <Label htmlFor="blur-type">Blur Type</Label>
+            <Label>Blur Type</Label>
             <div className="flex items-center justify-between space-x-2">
               <Controller
                 control={control}
@@ -104,13 +117,13 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 m-4 items-center place-content-center justify-center">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 m-4 justify-center">
         <div className="flex flex-col gap-1">
           <Label htmlFor="font-size">Font Size</Label>
           <Input
             className={cn('w-20', { 'border-red-500': errors.FontSize })}
             type="number"
-            {...register('FontSize')}
+            {...register('FontSize', { valueAsNumber: true })}
           />
           <FieldError error={errors.FontSize} />
         </div>
@@ -119,39 +132,31 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           <Input
             className={cn('w-20', { 'border-red-500': errors.MinLines })}
             type="number"
-            {...register('MinLines')}
+            {...register('MinLines', { valueAsNumber: true })}
           />
           <FieldError error={errors.MinLines} />
         </div>
-        <div className="flex gap-2">
-          <Label htmlFor="highlight-radius">Highlight Radius</Label>
-          <Input className="w-20" {...register('HighlightRadius')} />
+        <div className="flex flex-col gap-1">
+          <Label>Highlight Radius</Label>
+          <Input
+            className="w-20"
+            type="number"
+            {...register('HighlightRadius', { valueAsNumber: true })}
+          />
         </div>
-        <div className="flex gap-2">
-          <Label htmlFor="max-lines">Max Lines</Label>
+        <div className="flex flex-col gap-1">
+          <Label>Max Lines</Label>
           <Input
             className={cn('w-20', { 'border-red-500': errors.MaxLines })}
-            id="max-lines"
             type="number"
-            {...register('MaxLines')}
+            {...register('MaxLines', { valueAsNumber: true })}
           />
           <FieldError error={errors.MaxLines} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="duration">Duration (s)</Label>
-          <Input
-            className={cn('w-20', { 'border-red-500': errors.Duration })}
-            id="duration"
-            type="number"
-            {...register('Duration')}
-          />
-          <FieldError error={errors.Duration} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="vertical-spread">Vertical Spread</Label>
+          <Label>Vertical Spread</Label>
           <Input
             className={cn('w-20', { 'border-red-500': errors.VerticalSpread })}
-            id="vertical-spread"
             type="number"
             step="0.1"
             {...register('VerticalSpread')}
@@ -159,33 +164,30 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           <FieldError error={errors.VerticalSpread} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="feather">Feather</Label>
+          <Label>Feather</Label>
           <Input
             className={cn('w-20', { 'border-red-500': errors.Feather })}
-            id="feather"
             type="number"
             step="0.1"
-            {...register('Feather')}
+            {...register('Feather', { valueAsNumber: true })}
           />
           <FieldError error={errors.Feather} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="blur-radius">Blur Radius</Label>
+          <Label>Blur Radius</Label>
           <Input
             className={cn('w-20', { 'border-red-500': errors.BlurRadius })}
-            id="blur-radius"
             type="number"
-            {...register('BlurRadius')}
+            {...register('BlurRadius', { valueAsNumber: true })}
           />
           <FieldError error={errors.BlurRadius} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor="blur-angle">Blur Angle</Label>
+          <Label>Blur Angle</Label>
           <Input
             className={cn('w-20', { 'border-red-500': errors.BlurAngle })}
-            id="blur-angle"
             type="number"
-            {...register('BlurAngle')}
+            {...register('BlurAngle', { valueAsNumber: true })}
           />
           <FieldError error={errors.BlurAngle} />
         </div>

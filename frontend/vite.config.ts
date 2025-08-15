@@ -74,7 +74,8 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      ...(__DESKTOP__ ? [watchGoLibPlugin()] : []),
+      // ...(__DESKTOP__ ? [watchGoLibPlugin()] : []),
+      watchGoLibPlugin(),
     ],
     optimizeDeps: {
       exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],

@@ -197,7 +197,7 @@ const Prompt = () => {
               $Duration, $Width, $Height, $FPS, $Font
             </p>
           </div>
-          <div>
+          <div className="mt-4">
             <Label>Preview (with current config values):</Label>
             <div className="p-3 bg-muted rounded-md text-sm">
               {parsePrompt(promptText)}

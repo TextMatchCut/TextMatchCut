@@ -2,8 +2,7 @@ package main
 
 import (
 	"TextMatchCut/core"
-	"TextMatchCut/lib/gemini"
-	"TextMatchCut/lib/openai"
+
 	"TextMatchCut/types"
 	"bytes"
 	"context"
@@ -79,59 +78,19 @@ func (a *App) Run(config types.Config) types.RunResponse {
 
 	// 	return types.RunResponse{Success: true, VideoData: outputPath}
 	// }
-	// Initialize random seed
-	rand.Seed(time.Now().UnixNano())
+	// Is this necessary?
+	// rand.Seed(time.Now().UnixNano())
 
 	//get env for GEMINI_API_KEY
-	var aiSnippets []types.TextSnippet
-	if config.Provider == "gemini" {
-		apiKey := config.ApiKey
-		println("Using Gemini provider with API key:", apiKey)
-		if apiKey == "" {
-			return types.RunResponse{
-				Success: false,
-				Error:   "API key is required for Gemini provider",
-			}
-		}
-		snippets, err := gemini.GetSnippets(context.Background(), config)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting snippets from Gemini: %v\n", err)
-			return types.RunResponse{Success: false, Error: err.Error()}
-		}
-		aiSnippets = snippets
-	} else if config.Provider == "openai" {
-		apiKey := config.ApiKey
-		if apiKey == "" {
-			return types.RunResponse{
-				Success: false,
-				Error:   "API key is required for OpenAI provider",
-			}
-		}
-		snippets, err := openai.GetSnippets(context.Background(), apiKey, config)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting snippets from OpenAI: %v\n", err)
-			return types.RunResponse{Success: false, Error: err.Error()}
-		}
-		aiSnippets = snippets
-	} else {
-		fmt.Fprintf(os.Stderr, "Using provider random snippets\n")
-		// Use dummy snippets for development
-		aiSnippets = getDummySnippets(config)
-
-		for i := 0; i < 5; i++ {
-			snippet := core.GenerateRandomTextSnippet(config)
-			aiSnippets = append(aiSnippets, snippet)
-		}
-		// return types.RunResponse{
-		// 	Success: false,
-		// 	Error:   fmt.Sprintf("Unsupported provider '%s'. Supported providers are 'gemini' and 'openai'.", config.Provider),
-		// }
+	aiSnippets, err := core.GetSnippets(config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting snippets: %v\n", err)
+		return types.RunResponse{Success: false, Error: err.Error()}
 	}
 
-	// Auto-calculate font size if not specified explicitly
-	if config.FontSize == 50 { // Default value
-		config.FontSize = int(float64(config.Height) * 0.05)
-	}
+	// if config.FontSize == 50 { // Default value
+	// 	config.FontSize = int(float64(config.Height) * 0.05)
+	// }
 
 	videoData, fPath, err := generateFrames(config, aiSnippets, *a)
 
@@ -162,17 +121,13 @@ func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
 		snippet := core.GenerateRandomTextSnippet(config)
 		snippets = append(snippets, snippet)
 	}
-	var highlightRadius float64
-	if config.HighlightRadius != 0 {
-		highlightRadius = config.HighlightRadius
-	} else {
-		highlightRadius = float64(config.FontSize * len(config.HighlightedText))
-	}
+	// if config.HighlightRadius != 0 {
+	// 	highlightRadius = config.HighlightRadius
+	// } else {
+	// 	highlightRadius = float64(config.FontSize * len(config.HighlightedText))
+	// }
 
-	finalImage, err := core.GenerateFrame(1, config, snippets,
-		// TODO: need to work on this
-		highlightRadius,
-	)
+	finalImage, err := core.GenerateFrame(1, config, snippets)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating preview: %v\n", err)
 		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
@@ -336,7 +291,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 	// Generate frames
 	for frameNum := 0; frameNum < totalFrames; frameNum++ {
 		// Select random snippet and font
-		finalImage, err := core.GenerateFrame(frameNum, config, aiSnippets, highlightRadius)
+		finalImage, err := core.GenerateFrame(frameNum, config, aiSnippets)
 
 		os.Create(filepath.Join(tempDir, fmt.Sprintf("frame_%05d.png", frameNum)))
 

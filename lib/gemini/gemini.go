@@ -54,12 +54,6 @@ func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet,
 	}
 	geminiConfig := getGeminiConfig()
 
-	// TODO: WTF is this?
-	// Auto-calculate font size if not specified explicitly
-	if config.FontSize == 50 { // Default value
-		config.FontSize = int(float64(config.Height) * 0.05)
-	}
-
 	prompt := fmt.Sprintf("Respond with 5 different text snippets with the highlighted text '%s'. Each snippet should have between %d and %d lines. Make sure that the highlighted text is not always at the start but random", config.HighlightedText, config.MinLines, config.MaxLines)
 	log.Printf("Prompt for AI: %s\n", prompt)
 	result, err := client.Models.GenerateContent(
@@ -69,6 +63,7 @@ func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet,
 		geminiConfig,
 	)
 	if err != nil {
+		log.Printf("Error generating content: %v\n", err)
 		return nil, err
 	}
 
@@ -93,6 +88,8 @@ func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet,
 			HighlightIndex: highlightIndex,
 		}
 	}
+
+	fmt.Printf("Snippets look like this: %+v\n", aiSnippets)
 
 	return aiSnippets, nil
 }

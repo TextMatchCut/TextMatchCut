@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os/exec"
 	"strings"
 	"sync"
 
@@ -27,17 +26,6 @@ func getOpenAIClient(apiKey string) *openai.Client {
 
 func GetSnippets(ctx context.Context, apiKey string, config types.Config) ([]types.TextSnippet, error) {
 	client := getOpenAIClient(apiKey)
-
-	// Check if FFmpeg is available
-	_, err := exec.LookPath("ffmpeg")
-	if err != nil {
-		return nil, fmt.Errorf("FFmpeg not found in PATH")
-	}
-
-	// Auto-calculate font size if not specified explicitly
-	if config.FontSize == 50 { // Default value
-		config.FontSize = int(float64(config.Height) * 0.05)
-	}
 
 	prompt := fmt.Sprintf("Respond with 5 different text snippets with the highlighted text '%s'. Each snippet should have between %d and %d lines. Make sure that the highlighted text is not always at the start but random. Respond in JSON array format: [{\"text\": \"...\"}, ...]", config.HighlightedText, config.MinLines, config.MaxLines)
 	log.Printf("Prompt for AI: %s\n", prompt)

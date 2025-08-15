@@ -9,34 +9,6 @@ type EfficientVariableBlurOptions struct {
 	BlurSteps int     // Number of blur levels to create
 }
 
-type WasmInput struct {
-	FrameNum        int           `json:"frameNum"`
-	Config          Config        `json:"config"`
-	AiSnippets      []TextSnippet `json:"aiSnippets"`
-	FontFiles       []string      `json:"fontFiles"`
-	HighlightRadius float64       `json:"highlightRadius"`
-	HighlightedText string        `json:"highlightedText"`
-	HighlightColor  []float64     `json:"highlightColor"`
-	TextColor       []float64     `json:"textColor"`
-	BackgroundColor []float64     `json:"backgroundColor"`
-	BlurType        string        `json:"blurType"`
-	BlurRadius      float64       `json:"blurRadius"`
-	BlurAngle       float64       `json:"blurAngle"`
-	FontSize        int           `json:"fontSize"`
-	MinLines        int           `json:"minLines"`
-	MaxLines        int           `json:"maxLines"`
-	VerticalSpread  float64       `json:"verticalSpread"`
-}
-
-// auto type generation fails to parse this struct correctly
-// maybe used in the future
-// type AIConfig struct {
-// 	Enabled  bool   `json:"enabled"`
-// 	ApiKey   string `json:"apiKey"`
-// 	Model    string `json:"model"`
-// 	Provider string `json:"provider"`
-// }
-
 type Config struct {
 	Width           int     `json:"Width"`
 	Height          int     `json:"Height"`
@@ -65,6 +37,8 @@ type Config struct {
 	Sfx             string  `json:"Sfx"`
 	BackgroundImpl  string  `json:"BackgroundImpl"`
 	HighlightRadius float64 `json:"HighlightRadius"`
+	// not used in the backend
+	Type string `json:"Type"` // "preview" or "render"
 }
 
 type TextSnippet struct {
@@ -123,4 +97,9 @@ type GetDefaultAssetsPathResponse struct {
 	Success bool   `json:"success"`
 	Error   string `json:"error,omitempty"`
 	Path    string `json:"path,omitempty"`
+}
+
+type GO_RenderFrameWeb struct {
+	FrameNum int    `json:"frameNum"`
+	Config   Config `json:"config"`
 }

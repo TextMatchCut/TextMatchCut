@@ -178,7 +178,10 @@ const Sfx = () => {
       </div>
       <Button
         className="cursor-pointer mt-4"
-        onClick={() => {
+        type="button"
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
           if (howlerInstance.current) {
             howlerInstance.current.play();
           }

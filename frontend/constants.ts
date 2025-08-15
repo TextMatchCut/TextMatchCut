@@ -1,5 +1,4 @@
 import { BlurType, Config } from '@types';
-// import { types} from 'wailsjs/go//models';
 
 export const FONT_OPTIONS = [
   'Roboto-Italic',
@@ -56,9 +55,10 @@ export const DEFAULT_CONFIG = {
   Verbose: false,
   SoundEffectPath: '',
   Duration: 2,
+  Type: 'preview',
   Sfx: 'sfx/shutter.wav',
   BackgroundImpl: 'image', // 'image' or 'solid'
-  HighlightRadius: 0,
+  HighlightRadius: 300,
 } as Config;
 
 export const REPO_URL = 'https://github.com/uncor3/text-match-cut';

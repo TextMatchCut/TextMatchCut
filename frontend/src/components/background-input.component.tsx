@@ -75,21 +75,21 @@ const BackgroundInput = () => {
                   src={src} // Fallback to a default image if no file is selected
                   alt="Background Preview"
                   className={cn(
-                    'w-full h-auto mt-1 rounded-lg cursor-pointer',
+                    'w-[90%] md:w-full h-auto mt-1 rounded-lg cursor-pointer',
                     {
                       hidden: !src,
                     }
                   )}
                 />
                 <div
-                  className="absolute top-[-1.5rem] left-[90%] transform -translate-y-1/2 hover:bg-gray-700 p-2 rounded-lg"
+                  className="absolute top-[-1.5rem] left-[70%]  md:left-[90%] transform -translate-y-1/2 hover:bg-gray-700 p-2 rounded-lg"
                   title="Replace background image"
                   onClick={e => {
                     e.stopPropagation();
                     inputRef.current?.click();
                   }}
                 >
-                  <Replace className=" w-[20px] h-[20px]" />
+                  <Replace className="w-[20px] h-[20px]" />
                 </div>
               </div>
             </PhotoView>

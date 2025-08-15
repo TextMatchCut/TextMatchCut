@@ -18,6 +18,7 @@ const Resolution = () => {
     formState: { errors },
     watch,
     setValue,
+    register,
   } = useFormContext();
 
   const [custom, setCustom] = useState(false);
@@ -47,11 +48,11 @@ const Resolution = () => {
   return (
     <div className="flex flex-col gap-2 m-auto mt-4">
       <Label className="self-center" htmlFor="width-height">
-        Resolution & FPS & Duration
+        Resolution & FPS
       </Label>
       <div className="flex items-center space-x-2 gap-4 mt-5">
         <Select
-          value={getCurrentResolution()}
+          value={!custom ? getCurrentResolution() : 'custom'}
           onValueChange={handleChangeWidthHeight}
         >
           <SelectTrigger className="w-[180px]">
@@ -72,80 +73,54 @@ const Resolution = () => {
             hidden: !custom,
           })}
         >
-          <div className="flex items-center gap-1">
-            <Controller
-              control={control}
-              name="Width"
-              render={({ field }) => (
-                <Input
-                  type="number"
-                  id="width"
-                  placeholder="Width"
-                  {...field}
-                  className={cn({ 'border-red-500': errors.Width })}
-                />
-              )}
-            />
+          <div className="flex flex-col items-center gap-1">
             <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
               Width
             </span>
+            <Input
+              type="number"
+              placeholder="Width"
+              {...register('Width', { valueAsNumber: true })}
+              className={cn({ 'border-red-500': errors.Width })}
+            />
           </div>
           <div>X</div>
-          <div className="flex items-center gap-1">
-            <Controller
-              control={control}
-              name="Height"
-              render={({ field }) => (
-                <Input
-                  type="number"
-                  id="height"
-                  placeholder="Height"
-                  {...field}
-                  className={cn({ 'border-red-500': errors.Height })}
-                />
-              )}
-            />
+          <div className="flex flex-col items-center gap-1">
             <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
               Height
             </span>
+            <Input
+              type="number"
+              placeholder="Height"
+              {...register('Height', { valueAsNumber: true })}
+              className={cn({ 'border-red-500': errors.Height })}
+            />
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Controller
-            control={control}
-            name="FPS"
-            render={({ field }) => (
-              <Input
-                type="number"
-                id="fps"
-                placeholder="FPS"
-                {...field}
-                className={cn('max-w-[70px]', { 'border-red-500': errors.FPS })}
-              />
-            )}
+          <Input
+            type="number"
+            {...register('FPS', {
+              valueAsNumber: true,
+            })}
+            className={cn('max-w-[70px]', { 'border-red-500': errors.FPS })}
           />
           <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
             FPS
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <Controller
-            control={control}
-            name="Duration"
-            render={({ field }) => (
-              <Input
-                type="number"
-                id="duration"
-                placeholder="Duration (s)"
-                {...field}
-                className={cn('max-w-[70px]', {
-                  'border-red-500': errors.Duration,
-                })}
-              />
-            )}
+          <Input
+            type="number"
+            {...register('Duration', {
+              valueAsNumber: true,
+            })}
+            className={cn('max-w-[70px]', {
+              'border-red-500': errors.Duration,
+            })}
           />
           <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
-            Duration (s)
+            Duration
           </span>
         </div>
       </div>

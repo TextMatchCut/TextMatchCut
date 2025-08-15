@@ -165,6 +165,7 @@ const Sfx = () => {
       </div>
       <Button
         className="cursor-pointer mt-4"
+        type="button"
         onClick={e => {
           e.preventDefault();
           e.stopPropagation();

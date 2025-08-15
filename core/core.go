@@ -1,8 +1,11 @@
 package core
 
 import (
+	"TextMatchCut/lib/gemini"
+	"TextMatchCut/lib/openai"
 	"TextMatchCut/types"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -13,6 +16,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
@@ -938,7 +942,7 @@ func calculateHighlightPosition(config types.Config, snippet types.TextSnippet) 
 	return highlightCenterX, highlightCenterY, nil
 }
 
-func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSnippet, highlightRadius float64) (image.Image, error) {
+func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSnippet) (image.Image, error) {
 	var snippet types.TextSnippet
 	if frameNum < len(aiSnippets) {
 		snippet = aiSnippets[frameNum]
@@ -979,7 +983,7 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 		finalImage = ApplyDirectionalBlurFeathered(img, types.EfficientVariableDirectionalBlurOptions{
 			CenterX: config.Width / 2,
 			CenterY: config.Height / 2,
-			Radius:  highlightRadius,
+			Radius:  config.HighlightRadius,
 			// MaxLength: config.BlurRadius,
 			// Angle:     config.BlurAngle,
 			// Feather:   0.1,
@@ -994,7 +998,7 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 		finalImage = ApplyGaussianBlur(img, types.EfficientVariableBlurOptions{
 			CenterX:   config.Width / 2,
 			CenterY:   config.Height / 2,
-			Radius:    highlightRadius,
+			Radius:    config.HighlightRadius,
 			MaxBlur:   config.BlurRadius,
 			Feather:   0, // No feathering
 			BlurSteps: 20,
@@ -1003,7 +1007,7 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 		finalImage = ApplyGaussianBlurFeathered(img, types.EfficientVariableBlurOptions{
 			CenterX:   config.Width / 2,
 			CenterY:   config.Height / 2,
-			Radius:    highlightRadius,
+			Radius:    config.HighlightRadius,
 			MaxBlur:   config.BlurRadius,
 			Feather:   0.5,
 			BlurSteps: 20,
@@ -1013,7 +1017,7 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 		finalImage = ApplyHorizontalBlur(img, types.EfficientVariableDirectionalBlurOptions{
 			CenterX: config.Width / 2,
 			CenterY: config.Height / 2,
-			Radius:  highlightRadius,
+			Radius:  config.HighlightRadius,
 			// MaxLength: config.BlurRadius,
 			// Angle:     config.BlurAngle,
 			// Feather:   0.1,
@@ -1055,4 +1059,46 @@ func gaussianBlurRadius(radius float64, passes int) float64 {
 	a := (2*l + 1) * (l*(l+1) - 3*sigma2)
 	a /= 6 * (sigma2 - (l+1)*(l+1))
 	return l + a
+}
+
+func GetSnippets(config types.Config) ([]types.TextSnippet, error) {
+	var aiSnippets []types.TextSnippet
+	if config.Provider == "gemini" {
+		apiKey := config.ApiKey
+		if apiKey == "" {
+			return nil, fmt.Errorf("API key is required for Gemini provider")
+		}
+		// Create context with timeout to prevent indefinite blocking
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		snippets, err := gemini.GetSnippets(ctx, config)
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Println("Snippets:", snippets)
+		aiSnippets = snippets
+	} else if config.Provider == "openai" {
+		apiKey := config.ApiKey
+		if apiKey == "" {
+			return nil, fmt.Errorf("API key is required for OpenAI provider")
+		}
+		// Create context with timeout to prevent indefinite blocking
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		snippets, err := openai.GetSnippets(ctx, apiKey, config)
+		if err != nil {
+			return nil, fmt.Errorf("Error getting snippets from OpenAI: %v", err)
+		}
+		aiSnippets = snippets
+	} else {
+		// fmt.Fprintf(os.Stderr, "Using provider random snippets\n")
+		for i := 0; i < 5; i++ {
+			snippet := GenerateRandomTextSnippet(config)
+			aiSnippets = append(aiSnippets, snippet)
+		}
+	}
+	return aiSnippets, nil
 }

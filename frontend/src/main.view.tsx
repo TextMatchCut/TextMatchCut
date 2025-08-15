@@ -1,11 +1,9 @@
 import './App.css';
-import { PhotoProvider, PhotoView } from 'react-photo-view';
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Run,
   RenderPreview,
   GetDefaultAssetsPath,
-  ShowFileOnExplorer,
 } from '../wailsjs/go/main/App';
 import { fetchFile } from '@ffmpeg/util';
 import {
@@ -17,14 +15,13 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { actionStandalone } from '@/lib/action';
-
+import { action } from '@/lib/action';
+import * as Comlink from 'comlink';
 import { ArrowUp, Loader2Icon } from 'lucide-react';
 import useAppContext from '@/store';
 import clsx from 'clsx';
 import 'react-photo-view/dist/react-photo-view.css';
-import Drawer from '@/components/drawer.component';
-import { getDummySnippets, loadWasmBackend, loadFFmpeg } from '@/lib/utils';
+import { loadFFmpeg } from '@/lib/utils';
 import ConfigForm from './components/config-form.component';
 import toast from './lib/toast';
 import { EventsOn, EventsOff } from '../wailsjs/runtime';
@@ -32,32 +29,41 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { configSchema } from '@/lib/validation';
 import { DEFAULT_CONFIG } from '@constants';
-
-const MainView = () => {
+import { Config, GO_RenderFrameWeb_Input, GOWorkerType } from '@types';
+import { useShallow } from 'zustand/react/shallow';
+import GOWorker from './worker.ts?worker';
+const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
   const {
-    openDrawer,
-    setOpenDrawer,
-    setElapsedTime,
+    toggleDrawer,
     setStatus,
-    elapsedTime,
     status,
     ffmpeg,
     setProgress,
-    preview,
     setPreview,
-  } = useAppContext(s => s);
-  const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [videoOutputPath, setVideoOutputPath] = useState<string | null>(null);
-
+    setVideoOutputPath,
+    setVideoSrc,
+  } = useAppContext(
+    useShallow(s => ({
+      toggleDrawer: s.toggleDrawer,
+      setStatus: s.setStatus,
+      status: s.status,
+      ffmpeg: s.ffmpeg,
+      setProgress: s.setProgress,
+      setPreview: s.setPreview,
+      setVideoOutputPath: s.setVideoOutputPath,
+      setVideoSrc: s.setVideoSrc,
+    }))
+  );
+  const abortControllerRef = useRef<AbortController | null>(null); // For web cancellation
   const methods = useForm({
     resolver: zodResolver(configSchema),
     defaultValues: { ...DEFAULT_CONFIG, Type: 'render' as const },
     mode: 'onChange',
   });
 
+  const wasmWorkerRef = useRef<Comlink.Remote<GOWorkerType> | null>(null);
   const { getValues, setValue } = methods;
-
-  const loading = status === 'loading';
+  const loading = status === 'loading' || status === 'processing';
   useEffect(() => {
     async function writeAssets() {
       await ffmpeg.load();
@@ -68,13 +74,39 @@ const MainView = () => {
       );
       console.log('Assets written successfully');
     }
+
+    async function initComlinkWorker() {
+      return new Promise<void>((resolve, reject) => {
+        const worker = Comlink.wrap<GOWorkerType>(new GOWorker());
+
+        worker
+          .init()
+          .then(() => {
+            wasmWorkerRef.current = worker;
+            resolve();
+          })
+          .catch(error => {
+            console.error('Error initializing WASM worker:', error);
+            reject(error);
+          });
+      });
+    }
+
     async function initWeb() {
       try {
-        await loadWasmBackend();
-        await loadFFmpeg(ffmpeg);
-        await ffmpeg.load();
-        console.log('FFmpeg loaded successfully');
-        await writeAssets();
+        await Promise.all([
+          initComlinkWorker(),
+          new Promise<void>(async (resolve, reject) => {
+            try {
+              await loadFFmpeg(ffmpeg);
+              await ffmpeg.load();
+              await writeAssets();
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          }),
+        ]);
         setStatus('ready');
       } catch (error) {
         console.error('Error initializing', error);
@@ -99,13 +131,6 @@ const MainView = () => {
           title: 'Error',
         });
       }
-      // function type of setConfig seems to not work for some reason
-      // setConfig({
-      //   ...config,
-      //   Sfx: path.join(res.path!, 'sfx', 'shutter.wav'),
-      //   // assetsPath: res.path,
-      // });
-      // get sfx and bg img path
       setStatus('ready');
     }
     __DESKTOP__ ? init() : initWeb();
@@ -116,12 +141,6 @@ const MainView = () => {
 
     return () => {
       // clearInterval(saveInterval);
-      if (preview) {
-        URL.revokeObjectURL(preview);
-      }
-      if (videoSrc) {
-        URL.revokeObjectURL(videoSrc);
-      }
     };
   }, []);
 
@@ -139,40 +158,30 @@ const MainView = () => {
     setPreview(`data:image/png;base64,${res.frameData!}`);
   }
 
-  async function renderFrameWeb(i: number, input: any, write: boolean = true) {
-    return new Promise<void>(async (resolve, reject) => {
-      const frame = `/vid/frame-${i + 1}.png`;
-      console.log({ input });
-      const base64String = (window as any).GenerateFrameFromJSON(
-        JSON.stringify(input)
+  async function renderFrameWeb(
+    i: number,
+    input: GO_RenderFrameWeb_Input,
+    write: boolean = true
+  ) {
+    const frame = `/vid/frame-${i + 1}.png`;
+    console.log({ input });
+    const base64String = await wasmWorkerRef.current!.renderFrameWeb(input);
+    if (write) {
+      await ffmpeg.writeFile(
+        frame,
+        Uint8Array.from(atob(base64String), c => c.charCodeAt(0))
       );
-      if (write) {
-        await ffmpeg.writeFile(
-          frame,
-          Uint8Array.from(atob(base64String), c => c.charCodeAt(0))
-        );
-      }
+    }
 
-      console.log('Image frame rendered:', i + 1);
-      setPreview(`data:image/png;base64,${base64String}`);
-      const p = ((i + 1) / 5) * 100;
-      setProgress(p);
-      setTimeout(() => {
-        resolve();
-      }, 50); // Ensure UI updates before resolving
-    });
+    console.log('Image frame rendered:', i + 1);
+    setPreview(`data:image/png;base64,${base64String}`);
+    const p = ((i + 1) / 5) * 100;
+    setProgress(p);
   }
 
-  async function renderPreview() {
-    if (preview) {
-      URL.revokeObjectURL(preview);
-    }
-    if (videoSrc) {
-      URL.revokeObjectURL(videoSrc!);
-      setVideoSrc(null);
-    }
+  async function renderPreview(config: Config) {
     try {
-      await renderFrame(getValues());
+      await renderFrame(config);
     } catch (err) {
       setStatus('error');
       toast({
@@ -184,22 +193,11 @@ const MainView = () => {
     }
   }
 
-  async function renderPreviewWeb() {
-    if (preview) {
-      URL.revokeObjectURL(preview);
-      setVideoSrc(null);
-    }
-    if (videoSrc) {
-      URL.revokeObjectURL(videoSrc!);
-      setVideoSrc(null);
-    }
+  async function renderPreviewWeb(config: Config) {
     try {
       const input = {
-        frameNum: 1,
-        config: getValues(),
-        aiSnippets: getDummySnippets(),
-        highlightRadius: 400.0,
-        totalFrames: 1,
+        FrameNum: 1,
+        Config: config,
       };
       await renderFrameWeb(0, input, false);
     } catch (err) {
@@ -212,22 +210,27 @@ const MainView = () => {
       console.error('Error calling renderFrame:', err);
     }
   }
-  async function renderVideoWeb() {
+  async function renderVideoWeb(config: Config) {
     try {
       const input = {
-        frameNum: -1,
-        config: getValues(),
-        aiSnippets: getDummySnippets(),
-        highlightRadius: 400.0,
-        totalFrames: 1,
+        FrameNum: -1,
+        Config: config,
       };
 
       for (let i = 0; i < 5; i++) {
         try {
-          input.frameNum = i + 1; // Update frame number
+          input.FrameNum = i + 1; // Update frame number
           await renderFrameWeb(i, input);
         } catch (err) {
           console.error('Error calling WASM function:', err);
+
+          return toast({
+            title: 'Error',
+            message: `Failed to render frame ${i + 1}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+            type: 'error',
+          });
         }
       }
 
@@ -274,24 +277,16 @@ const MainView = () => {
     }
   }
 
-  const handlePreviewClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    setValue('Type', 'preview');
-  };
-
-  async function renderVideo() {
-    console.log('Rendering video with config:', getValues());
+  async function renderVideo(config: Config) {
+    console.log('Rendering video with config:', config);
     EventsOn('frame', args => {
       const { frameNum, totalFrames, frameData } = args;
       const p = (frameNum / totalFrames) * 100;
       setProgress(p);
       setPreview(`data:image/png;base64,${frameData}`);
     });
-    if (videoSrc) {
-      URL.revokeObjectURL(videoSrc);
-      setVideoSrc(null);
-    }
 
-    return await Run(getValues())
+    return await Run(config)
       .then(async res => {
         if (!res.success) {
           return toast({
@@ -309,22 +304,49 @@ const MainView = () => {
       });
   }
 
-  const onValidSubmit = () => {
-    const config = getValues();
+  const onValidSubmit = (config: Config) => {
     console.log('Form is valid, proceeding with config:', config);
-    if (config.Type === 'preview') {
-      if (__DESKTOP__) {
-        actionStandalone(renderPreview)();
-      } else {
-        actionStandalone(renderPreviewWeb, 250)();
+
+    const cleanVideoAndPreview = () => {
+      const { preview, videoSrc } = useAppContext.getState();
+      if (preview) {
+        URL.revokeObjectURL(preview);
+        setVideoSrc(null);
       }
+      if (videoSrc) {
+        URL.revokeObjectURL(videoSrc!);
+        setVideoSrc(null);
+      }
+    };
+
+    if (config.Type === 'preview') {
+      if (__DESKTOP__)
+        return action(renderPreview, {
+          before: cleanVideoAndPreview,
+          params: config,
+        });
+
+      //! Web
+      action(renderPreviewWeb, {
+        delay: 250,
+        before: cleanVideoAndPreview,
+        params: config,
+      });
       return;
     }
-    if (__DESKTOP__) {
-      actionStandalone(renderVideo)();
-    } else {
-      actionStandalone(renderVideoWeb, 250)();
-    }
+
+    if (__DESKTOP__)
+      return action(renderVideo, {
+        before: cleanVideoAndPreview,
+        params: config,
+      });
+
+    //! Web
+    action(renderVideoWeb, {
+      delay: 250,
+      before: cleanVideoAndPreview,
+      params: config,
+    });
   };
 
   const onInvalidSubmit = (errors: any) => {
@@ -343,159 +365,96 @@ const MainView = () => {
     });
   };
 
-  async function downloadVideoWeb() {
-    if (!videoSrc) return;
-
-    const link = document.createElement('a');
-    link.href = videoSrc;
-    // FIXME: if highlighted text changes,it is going to reflect here
-    link.download = `output-${getValues().HighlightedText}-${Date.now()}.mp4`;
-    link.click();
-  }
-
-  async function showVideoLocation() {
-    ShowFileOnExplorer(videoOutputPath!);
-  }
-
   return (
-    <>
-      <FormProvider {...methods}>
-        <form onSubmit={methods.handleSubmit(onValidSubmit, onInvalidSubmit)}>
-          <Card className="mx-auto select-none">
-            <CardHeader>
-              {!__DESKTOP__ && <CardTitle>Generate Text Cut Match</CardTitle>}
-              <CardDescription className="w-[70%] m-auto">
-                This tool generates a video with text cut matches based on the
-                provided snippets. Change the settings below to customize the
-                output.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto rounded-lg p-4">
-              <ConfigForm />
-            </CardContent>
+    <FormProvider {...methods}>
+      <form onSubmit={methods.handleSubmit(onValidSubmit, onInvalidSubmit)}>
+        <Card className="mx-auto select-none">
+          <CardHeader>
+            {!__DESKTOP__ && <CardTitle>Generate Text Cut Match</CardTitle>}
+            <CardDescription className="w-[70%] m-auto">
+              This tool generates a video with text cut matches based on the
+              provided snippets. Change the settings below to customize the
+              output.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto rounded-lg p-4">
+            <ConfigForm />
+          </CardContent>
 
-            <CardFooter className="m-auto h-[100px]">
-              <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-sm bg-white/10 w-fit p-2 px-4 rounded-2xl">
-                <Button
-                  variant="outline"
-                  className="max-w-sm cursor-pointer"
-                  disabled={loading}
-                  onClick={() => {
-                    setValue('Type', 'render' as const);
-                  }}
-                  type="submit"
-                >
-                  <Loader2Icon
-                    className={clsx('animate-spin', {
-                      hidden: !loading,
-                    })}
-                  />
-                  Render
-                </Button>
+          <CardFooter className="m-auto h-[100px]">
+            <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-sm bg-white/10 w-fit p-2 px-4 rounded-2xl">
+              <Button
+                variant="outline"
+                className="max-w-sm cursor-pointer"
+                disabled={loading}
+                onClick={() => {
+                  setValue('Type', 'render');
+                }}
+                type="submit"
+              >
+                <Loader2Icon
+                  className={clsx('animate-spin', {
+                    hidden: !loading,
+                  })}
+                />
+                Render
+              </Button>
 
-                <Button
-                  variant="outline"
-                  className="max-w-sm cursor-pointer"
-                  title="Renders the first frame of the video"
-                  disabled={loading}
-                  type="submit"
-                  onClick={handlePreviewClick}
-                >
-                  <Loader2Icon
-                    className={clsx('animate-spin', {
-                      hidden: !loading,
-                    })}
-                  />
-                  Preview
-                </Button>
+              <Button
+                variant="outline"
+                className="max-w-sm cursor-pointer"
+                title="Renders the first frame of the video"
+                disabled={loading}
+                type="submit"
+                onClick={() => setValue('Type', 'preview')}
+              >
+                <Loader2Icon
+                  className={clsx('animate-spin', {
+                    hidden: !loading,
+                  })}
+                />
+                Preview
+              </Button>
 
-                <Button
-                  variant="outline"
-                  className="max-w-sm cursor-pointer"
-                  disabled={loading}
-                  type="button"
-                  onClick={() => setOpenDrawer(!openDrawer)}
-                >
-                  <ArrowUp />
-                  Open Drawer
-                </Button>
-              </div>
-            </CardFooter>
-          </Card>
-        </form>
-      </FormProvider>
-      <Drawer>
-        <PhotoProvider>
-          <div className="m-auto">
-            {!preview && !videoSrc ? (
-              status === 'processing' ? (
-                <>
-                  <h2 className="text-center text-lg font-semibold mb-4">
-                    Processing...
-                  </h2>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-center text-lg font-semibold mb-4">
-                    Nothing to see here
-                  </h2>
-                  <p className="text-center text-sm text-muted-foreground">
-                    Render a preview or video to see the results here.
-                  </p>
-                </>
-              )
-            ) : null}
-            {preview ? (
-              <>
-                <h2 className="text-center text-lg font-semibold mb-4">
-                  {status === 'processing' ? 'Processing...' : 'Preview'}
-                </h2>
-
-                <PhotoView src={preview}>
-                  <div className="rounded-md overflow-hidden">
-                    <img
-                      src={preview}
-                      data-preview-img
-                      alt="Preview"
-                      className="cursor-pointer object-cover"
-                    />
-                  </div>
-                </PhotoView>
-
-                <Button
-                  className="mt-4"
-                  onClick={
-                    __DESKTOP__
-                      ? actionStandalone(renderVideo)
-                      : actionStandalone(renderVideoWeb, 250)
-                  }
-                >
-                  Render Full Video
-                </Button>
-              </>
-            ) : null}
-            {videoSrc ? (
-              <>
-                <h2 className="text-center text-lg font-semibold mb-4">
-                  Output
-                </h2>
-                <video
-                  controls
-                  style={{ maxWidth: '100%', height: 'auto' }}
-                  src={videoSrc || undefined}
-                ></video>
-                <Button
-                  className="mt-4"
-                  onClick={__DESKTOP__ ? showVideoLocation : downloadVideoWeb}
-                >
-                  {videoOutputPath ? 'Show Video Location' : 'Download Video'}
-                </Button>
-              </>
-            ) : null}
-          </div>
-        </PhotoProvider>
-      </Drawer>
-    </>
+              <Button
+                variant="outline"
+                className="max-w-sm cursor-pointer"
+                type="button"
+                onClick={toggleDrawer}
+              >
+                <ArrowUp />
+                Open Drawer
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  wasmWorkerRef
+                    .current!.getSnippets(getValues())
+                    .then(snippets => {
+                      console.log('Received snippets from worker:', snippets);
+                      // Handle the received snippets as needed
+                    })
+                    .catch(error => {
+                      console.error(
+                        'Error getting snippets from worker:',
+                        error
+                      );
+                      toast({
+                        title: 'Error',
+                        message: `Failed to get snippets: ${error.message}`,
+                        type: 'error',
+                      });
+                    });
+                }}
+              >
+                Get Snippets
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+        {drawer}
+      </form>
+    </FormProvider>
   );
 };
 
