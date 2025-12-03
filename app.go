@@ -50,13 +50,12 @@ func (a *App) GetDefaultAssetsPath() types.GetDefaultAssetsPathResponse {
 }
 
 func (a *App) Run(config types.Config) types.RunResponse {
+
 	_, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: FFmpeg not found in PATH. Please install FFmpeg.\n")
 		return types.RunResponse{Success: false, Error: "FFmpeg not found in PATH. Please install FFmpeg."}
 	}
-
-	// dev := false
 
 	snippets := make([]types.TextSnippet, 0, 5)
 	for i := 0; i < 5; i++ {
@@ -68,20 +67,6 @@ func (a *App) Run(config types.Config) types.RunResponse {
 		fmt.Printf("Generated %d text snippets\n", len(snippets))
 	}
 
-	// if dev {
-	// 	outputPath, err := generateFrames(config, snippets, *a)
-	// 	if err != nil {
-	// 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-	// 		return types.RunResponse{Success: false, Error: err.Error()}
-	// 		// os.Exit(1)
-	// 	}
-
-	// 	return types.RunResponse{Success: true, VideoData: outputPath}
-	// }
-	// Is this necessary?
-	// rand.Seed(time.Now().UnixNano())
-
-	//get env for GEMINI_API_KEY
 	aiSnippets, err := core.GetSnippets(config)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting snippets: %v\n", err)
@@ -346,12 +331,8 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 
 	fDir := filepath.Join(hDir, ".textmatchcut")
 
-	// Create video using FFmpeg
 	outputPath := filepath.Join(fDir, generateUniqueFilename("text_match_cut_", "mp4"))
-	// outputPath := config.OutputPath
-	// if outputPath == "" {
-	// 	outputPath = generateUniqueFilename("text_match_cut", "mp4")
-	// }
+
 	os.MkdirAll(fDir, 0755)
 
 	var cmd *exec.Cmd
@@ -391,22 +372,6 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 		"-shortest", // End encoding when the shortest stream (video) ends
 		outputPath,
 	)
-	// }
-	// }
-
-	// if cmd == nil {
-	// 	// Original FFmpeg command or fallback
-	// 	cmd = exec.Command("ffmpeg",
-	// 		"-y", // Overwrite output file
-	// 		"-framerate", strconv.Itoa(config.FPS),
-	// 		"-i", filepath.Join(tempDir, "frame_%05d.png"),
-	// 		"-c:v", "libx264",
-	// 		"-preset", "medium",
-	// 		"-pix_fmt", "yuv420p",
-	// 		"-r", strconv.Itoa(config.FPS),
-	// 		outputPath,
-	// 	)
-	// }
 
 	if config.Verbose {
 		fmt.Printf("Running FFmpeg command: %s\n", strings.Join(cmd.Args, " "))

@@ -37,6 +37,7 @@ type Config struct {
 	Sfx             string  `json:"Sfx"`
 	BackgroundImpl  string  `json:"BackgroundImpl"`
 	HighlightRadius float64 `json:"HighlightRadius"`
+	Prompt          string  `json:"Prompt"` //
 	// not used in the backend
 	Type string `json:"Type"` // "preview" or "render"
 }

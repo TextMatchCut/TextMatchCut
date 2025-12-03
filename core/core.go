@@ -75,7 +75,6 @@ func GenerateRandomTextSnippet(config types.Config) types.TextSnippet {
 	}
 }
 
-// Load font from file or use embedded font
 func loadFontBase64(src string) (*truetype.Font, error) {
 	/*to be implemented */
 	// if fontPath == "embedded" {
@@ -103,39 +102,6 @@ func generateUniqueFilename(prefix, extension string) string {
 	bytes := make([]byte, 8)
 	rand.Read(bytes)
 	return fmt.Sprintf("%s_%s.%s", prefix, hex.EncodeToString(bytes), extension)
-}
-
-func parseHexColor(s string) (color.RGBA, error) {
-	s = strings.TrimPrefix(s, "#")
-	var c color.RGBA
-	c.A = 0xff // Default to fully opaque
-
-	// Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-	if len(s) == 3 {
-		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2]})
-	} else if len(s) == 4 {
-		s = string([]byte{s[0], s[0], s[1], s[1], s[2], s[2], s[3], s[3]})
-	}
-
-	decoded, err := hex.DecodeString(s)
-	if err != nil {
-		return c, err
-	}
-
-	switch len(decoded) {
-	case 3: // RRGGBB
-		c.R = decoded[0]
-		c.G = decoded[1]
-		c.B = decoded[2]
-	case 4: // RRGGBBAA
-		c.R = decoded[0]
-		c.G = decoded[1]
-		c.B = decoded[2]
-		c.A = decoded[3]
-	default:
-		return c, fmt.Errorf("invalid hex color string length: %d", len(decoded))
-	}
-	return c, nil
 }
 
 // Create text image frame
@@ -187,8 +153,6 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, highli
 	totalHeight := lineHeight * float64(len(snippet.Lines))
 	startY := (float64(config.Height) - totalHeight) / 2
 
-	// Draw text lines
-	// dc.SetRGBA255(int(textColor.R), int(textColor.G), int(textColor.B), int(textColor.A))
 	dc.SetHexColor(config.TextColor)
 
 	for i, line := range snippet.Lines {
@@ -214,13 +178,10 @@ func createTextImageFrame(config types.Config, snippet types.TextSnippet, highli
 
 				// Draw highlight rectangle
 				padding := float64(config.FontSize) * 0.1
-				// dc.SetRGBA255(int(highlightColor.R), int(highlightColor.G), int(highlightColor.B), int(highlightColor.A))
 				dc.SetHexColor(config.HighlightColor)
 				dc.DrawRectangle(highlightX-padding, y-padding, highlightWidth+2*padding, lineHeight+2*padding)
 				dc.Fill()
 
-				// Draw text parts
-				// dc.SetRGBA255(int(textColor.R), int(textColor.G), int(textColor.B), int(textColor.A))
 				dc.SetHexColor(config.TextColor)
 
 				// Draw prefix
@@ -696,9 +657,7 @@ func FastDirectionalBlur(src image.Image, angle, length float64) *image.RGBA {
 	return dst
 }
 
-// Main Gaussian blur function
 func FastGaussianBlur(src image.Image, radius float64) *image.RGBA {
-	// Convert to RGBA if needed
 	var srcRGBA *image.RGBA
 	if rgba, ok := src.(*image.RGBA); ok {
 		srcRGBA = rgba
@@ -731,7 +690,7 @@ func FastGaussianBlur(src image.Image, radius float64) *image.RGBA {
 	return result
 }
 
-// ApplyDirectionalBlurFeathered - optimized version using FastDirectionalBlur
+/* using multi cores do not seem to improve performance a lot 1%~2% */
 func ApplyDirectionalBlurFeathered(src image.Image, options types.EfficientVariableDirectionalBlurOptions) *image.RGBA {
 	bounds := src.Bounds()
 
@@ -824,7 +783,6 @@ func ApplyGaussianBlur(src image.Image, options types.EfficientVariableBlurOptio
 	return result
 }
 
-// ApplyGaussianBlurFeathered creates a feathered blur effect using the fast Gaussian implementation
 func ApplyGaussianBlurFeathered(src image.Image, options types.EfficientVariableBlurOptions) *image.RGBA {
 	bounds := src.Bounds()
 
@@ -950,7 +908,6 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 		snippet = aiSnippets[rand.Intn(len(aiSnippets))]
 	}
 
-	// Calculate highlighted text position BEFORE generating the frame
 	highlightCenterX, highlightCenterY, err := calculateHighlightPosition(config, snippet)
 	if err != nil {
 		if config.Verbose {
@@ -959,20 +916,11 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 		return nil, fmt.Errorf("failed to calculate highlight position for frame %d: %v", frameNum, err)
 	}
 
-	// Generate frame
-	fmt.Printf("X and Y coordinates for highlight: %.2f, %.2f\n", highlightCenterX, highlightCenterY)
 	img, err := createTextImageFrame(config, snippet, highlightCenterX, highlightCenterY)
 	if err != nil {
 		if config.Verbose {
 			fmt.Printf("Warning: Failed to generate frame %d: %v\n", frameNum, err)
 		}
-		// // Try with embedded font as fallback
-		// img, err = createTextImageFrame(config, snippet, "embedded", highlightCenterX, highlightCenterY)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("failed to generate frame %d even with fallback font: %v", frameNum, err)
-		// }
-		// // Recalculate position with embedded font
-		// highlightCenterX, highlightCenterY, _ = calculateHighlightPosition(config, snippet, "embedded")
 		return nil, fmt.Errorf("failed to generate frame %d: %v", frameNum, err)
 	}
 
@@ -981,26 +929,21 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 	switch config.BlurType {
 	case "directional":
 		finalImage = ApplyDirectionalBlurFeathered(img, types.EfficientVariableDirectionalBlurOptions{
-			CenterX: config.Width / 2,
-			CenterY: config.Height / 2,
-			Radius:  config.HighlightRadius,
-			// MaxLength: config.BlurRadius,
-			// Angle:     config.BlurAngle,
-			// Feather:   0.1,
-			// BlurSteps: 3,
+			CenterX:   config.Width / 2,
+			CenterY:   config.Height / 2,
+			Radius:    config.HighlightRadius,
 			MaxLength: 55,
-			Angle:     150,
-			Feather:   1,
+			Angle:     config.BlurAngle,
+			Feather:   config.Feather,
 			BlurSteps: 3,
 		})
 	case "gaussian-no-feather":
-		// Apply the existing variable blur
 		finalImage = ApplyGaussianBlur(img, types.EfficientVariableBlurOptions{
 			CenterX:   config.Width / 2,
 			CenterY:   config.Height / 2,
 			Radius:    config.HighlightRadius,
 			MaxBlur:   config.BlurRadius,
-			Feather:   0, // No feathering
+			Feather:   0,
 			BlurSteps: 20,
 		})
 	case "gaussian":
@@ -1009,26 +952,20 @@ func GenerateFrame(frameNum int, config types.Config, aiSnippets []types.TextSni
 			CenterY:   config.Height / 2,
 			Radius:    config.HighlightRadius,
 			MaxBlur:   config.BlurRadius,
-			Feather:   0.5,
+			Feather:   config.Feather,
 			BlurSteps: 20,
 		})
 	case "horizontal":
-		// Apply the efficient horizontal box blur
 		finalImage = ApplyHorizontalBlur(img, types.EfficientVariableDirectionalBlurOptions{
-			CenterX: config.Width / 2,
-			CenterY: config.Height / 2,
-			Radius:  config.HighlightRadius,
-			// MaxLength: config.BlurRadius,
-			// Angle:     config.BlurAngle,
-			// Feather:   0.1,
-			// BlurSteps: 3,
+			CenterX:   config.Width / 2,
+			CenterY:   config.Height / 2,
+			Radius:    config.HighlightRadius,
 			MaxLength: 20,
-			Angle:     225,
-			Feather:   1,
+			Angle:     config.BlurAngle,
+			Feather:   config.Feather,
 			BlurSteps: 3,
 		})
 	default:
-		//    throw error
 		return nil, fmt.Errorf("Blur type didn't match a known type")
 	}
 

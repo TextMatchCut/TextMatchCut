@@ -39,7 +39,8 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
   useEffect(() => {
     // needed because HighlightRadius should be related to HighlightedText length and fontSize
     if (highlightedText && typeof fontSize === 'number' && fontSize > 0) {
-      const newRadius = fontSize * highlightedText.length;
+      // const newRadius = fontSize * highlightedText.length;
+      const newRadius = fontSize * highlightedText.length * 0.85;
       setValue('HighlightRadius', newRadius, { shouldValidate: true });
     }
   }, [highlightedText, fontSize]);

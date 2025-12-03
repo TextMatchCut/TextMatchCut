@@ -2,12 +2,12 @@ package gemini
 
 import (
 	"TextMatchCut/types"
+	"TextMatchCut/util"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"sync"
 
 	"google.golang.org/genai"
@@ -54,12 +54,11 @@ func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet,
 	}
 	geminiConfig := getGeminiConfig()
 
-	prompt := fmt.Sprintf("Respond with 5 different text snippets with the highlighted text '%s'. Each snippet should have between %d and %d lines. Make sure that the highlighted text is not always at the start but random", config.HighlightedText, config.MinLines, config.MaxLines)
-	log.Printf("Prompt for AI: %s\n", prompt)
+	log.Printf("Prompt for AI: %s\n", config.Prompt)
 	result, err := client.Models.GenerateContent(
 		ctx,
 		config.Model,
-		genai.Text(prompt),
+		genai.Text(config.Prompt),
 		geminiConfig,
 	)
 	if err != nil {
@@ -72,22 +71,7 @@ func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet,
 		return nil, err
 	}
 
-	// Convert AI snippets to TextSnippet format
-	aiSnippets := make([]types.TextSnippet, len(snippets))
-	for i, snippet := range snippets {
-		lines := strings.Split(snippet.Text, ".")
-		highlightIndex := -1
-		for j, line := range lines {
-			if strings.Contains(line, config.HighlightedText) {
-				highlightIndex = j
-				break
-			}
-		}
-		aiSnippets[i] = types.TextSnippet{
-			Lines:          lines,
-			HighlightIndex: highlightIndex,
-		}
-	}
+	aiSnippets := util.ParseSnippetsJSON(snippets, config.HighlightedText)
 
 	fmt.Printf("Snippets look like this: %+v\n", aiSnippets)
 

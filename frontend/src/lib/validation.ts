@@ -71,7 +71,7 @@ export const configSchema = z
     // Provider: z.enum(Providers, {
     //   message: 'Please select a valid provider.',
     // }),
-
+    Prompt: z.string(),
     Provider: z.string().optional(),
     Model: z.string().optional(),
     ApiKey: z.string().optional(),
@@ -146,6 +146,14 @@ export const configSchema = z
         code: 'custom',
         message: 'API key is required',
         path: ['ApiKey'],
+      });
+    }
+
+    if (data.Prompt.trim() === '') {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Prompt cannot be empty.',
+        path: ['Prompt'],
       });
     }
   });

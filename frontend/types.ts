@@ -20,5 +20,8 @@ export type GO_RenderFrameWeb_Input = {
 export type GOWorkerType = Comlink.Remote<{
   init: () => Promise<void>;
   getSnippets: (payload: any) => Promise<any>;
-  renderFrameWeb: (input: GO_RenderFrameWeb_Input) => Promise<string>;
+  renderFrameWeb: (
+    input: GO_RenderFrameWeb_Input,
+    snippets: any
+  ) => Promise<string>;
 }>;

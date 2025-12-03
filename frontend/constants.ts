@@ -52,6 +52,7 @@ export const DEFAULT_CONFIG = {
   ApiKey: '',
   Model: '',
   Provider: '',
+  Prompt: '',
   Verbose: false,
   SoundEffectPath: '',
   Duration: 2,

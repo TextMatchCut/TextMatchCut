@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import useAppContext from '@/store';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Progress } from '@/components/ui/progress';
 
 const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -8,19 +8,6 @@ const Drawer: React.FC<React.PropsWithChildren> = ({ children }) => {
   const openDrawer = useAppContext(s => s.openDrawer);
   const progress = useAppContext(s => s.progress);
   const status = useAppContext(s => s.status);
-  //   useEffect(() => {
-  //     const handleKeyDown = (event: KeyboardEvent) => {
-  //       if (event.key === 'Escape') {
-  //         setOpenDrawer(!openDrawer);
-  //       }
-  //     };
-
-  //     document.addEventListener('keydown', handleKeyDown);
-
-  //     return () => {
-  //       document.removeEventListener('keydown', handleKeyDown);
-  //     };
-  //   }, []);
 
   return (
     <div

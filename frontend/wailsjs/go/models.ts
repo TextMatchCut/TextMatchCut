@@ -28,6 +28,7 @@ export namespace types {
 	    Sfx: string;
 	    BackgroundImpl: string;
 	    HighlightRadius: number;
+	    Prompt: string;
 	    Type: string;
 	
 	    static createFrom(source: any = {}) {
@@ -63,6 +64,7 @@ export namespace types {
 	        this.Sfx = source["Sfx"];
 	        this.BackgroundImpl = source["BackgroundImpl"];
 	        this.HighlightRadius = source["HighlightRadius"];
+	        this.Prompt = source["Prompt"];
 	        this.Type = source["Type"];
 	    }
 	}

@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { OpenURL } from '../../wailsjs/go/main/App';
 import { useFormContext } from 'react-hook-form';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ const Prompt = () => {
   // const config = useAppContext(s => s.config);
   // const setConfig = useAppContext(s => s.setConfig);
   const [promptText, setPromptText] = useState(
-    "Respond with 5 different text snippets with the highlighted text '$HighlightedText'. Each snippet should have between $MinLines and $MaxLines lines. Make sure that the highlighted text is not always at the start but random"
+    "Respond with 5 different text snippets with the text '$HighlightedText'. Each snippet should have between $MinLines and $MaxLines sentences. Make sure that the highlighted text is not always at the start but random."
   );
 
   const parsePrompt = (prompt: string) => {
@@ -46,6 +46,12 @@ const Prompt = () => {
       .replace(/\$FPS/g, config?.FPS?.toString() || '[FPS]')
       .replace(/\$Font/g, config?.Font || '[Font]');
   };
+
+  const parsedText = parsePrompt(promptText);
+
+  useEffect(() => {
+    setValue('Prompt', parsedText);
+  });
 
   return (
     <div className="max-w-[600px] m-auto my-5">
@@ -75,7 +81,7 @@ const Prompt = () => {
       >
         <TabsList className="m-auto">
           <TabsTrigger className="cursor-pointer" value="random">
-            Random Keywords
+            Random Snippets
           </TabsTrigger>
           <TabsTrigger className="cursor-pointer" value="gemini">
             Use Gemini
@@ -88,7 +94,7 @@ const Prompt = () => {
         <TabsContent value="random">
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Generate text snippets using random keywords
+              Generate text snippets using random words.
             </p>
           </div>
         </TabsContent>
@@ -186,7 +192,6 @@ const Prompt = () => {
             <Label htmlFor="openai-prompt">Prompt Template</Label>
             <textarea
               className="w-full p-2 border rounded-md mt-2"
-              id="openai-prompt"
               placeholder="Enter your prompt template..."
               value={promptText}
               onChange={e => setPromptText(e.target.value)}
@@ -199,9 +204,12 @@ const Prompt = () => {
           </div>
           <div className="mt-4">
             <Label>Preview (with current config values):</Label>
-            <div className="p-3 bg-muted rounded-md text-sm">
-              {parsePrompt(promptText)}
-            </div>
+            <textarea
+              readOnly
+              {...register('Prompt')}
+              className="p-3 bg-muted rounded-md text-sm w-full min-h-[100px]"
+              value={parsedText}
+            />
           </div>
         </>
       ) : null}

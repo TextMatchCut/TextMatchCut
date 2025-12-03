@@ -32,6 +32,8 @@ import { DEFAULT_CONFIG } from '@constants';
 import { Config, GO_RenderFrameWeb_Input, GOWorkerType } from '@types';
 import { useShallow } from 'zustand/react/shallow';
 import GOWorker from './worker.ts?worker';
+import { GetSnippetsWeb } from '@/lib/snippet';
+
 const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
   const {
     toggleDrawer,
@@ -42,6 +44,7 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
     setPreview,
     setVideoOutputPath,
     setVideoSrc,
+    setSnippetsReady,
   } = useAppContext(
     useShallow(s => ({
       toggleDrawer: s.toggleDrawer,
@@ -52,8 +55,10 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
       setPreview: s.setPreview,
       setVideoOutputPath: s.setVideoOutputPath,
       setVideoSrc: s.setVideoSrc,
+      setSnippetsReady: s.setSnippetsReady,
     }))
   );
+  // TODO: add cancellation support for web
   const abortControllerRef = useRef<AbortController | null>(null); // For web cancellation
   const methods = useForm({
     resolver: zodResolver(configSchema),
@@ -161,16 +166,25 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
   async function renderFrameWeb(
     i: number,
     input: GO_RenderFrameWeb_Input,
+    /*JSON*/
+    snippets: any,
     write: boolean = true
   ) {
     const frame = `/vid/frame-${i + 1}.png`;
     console.log({ input });
-    const base64String = await wasmWorkerRef.current!.renderFrameWeb(input);
+    const base64String = await wasmWorkerRef.current!.renderFrameWeb(
+      input,
+      snippets
+    );
     if (write) {
-      await ffmpeg.writeFile(
-        frame,
-        Uint8Array.from(atob(base64String), c => c.charCodeAt(0))
-      );
+      try {
+        await ffmpeg.writeFile(
+          frame,
+          Uint8Array.from(atob(base64String), c => c.charCodeAt(0))
+        );
+      } catch (error) {
+        console.error('Error writing frame to ffmpeg FS:', error);
+      }
     }
 
     console.log('Image frame rendered:', i + 1);
@@ -180,6 +194,7 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
   }
 
   async function renderPreview(config: Config) {
+    console.log('Rendering preview with config:', config);
     try {
       await renderFrame(config);
     } catch (err) {
@@ -199,7 +214,7 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
         FrameNum: 1,
         Config: config,
       };
-      await renderFrameWeb(0, input, false);
+      await renderFrameWeb(0, input, '', false);
     } catch (err) {
       setStatus('error');
       toast({
@@ -217,13 +232,19 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
         Config: config,
       };
 
-      for (let i = 0; i < 5; i++) {
+      // Get snippets once before the loop
+      const snippets = await GetSnippetsWeb(input.Config);
+      setSnippetsReady(true);
+
+      const totalFrames = config.Duration! * (config.FPS || 3);
+
+      // Generate all frames
+      for (let i = 0; i < totalFrames; i++) {
         try {
-          input.FrameNum = i + 1; // Update frame number
-          await renderFrameWeb(i, input);
+          input.FrameNum = i + 1;
+          await renderFrameWeb(i, input, snippets);
         } catch (err) {
           console.error('Error calling WASM function:', err);
-
           return toast({
             title: 'Error',
             message: `Failed to render frame ${i + 1}: ${
@@ -234,27 +255,48 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
         }
       }
 
-      const filterComplex = `format=yuv420p[v];[1:a]aloop=loop=${
-        5 - 1
-      }:size=48000[a]`;
+      const filterComplexParts: string[] = [];
+      let amixInputs = '';
+
+      // Create delayed audio streams for each frame (matching Go logic)
+      for (let i = 0; i < totalFrames; i++) {
+        const delayMs = Math.floor((i * 1000) / (config.FPS || 3));
+        const outputStream = `a${i}`;
+        // [1:a] refers to the audio stream from the second input file (shutter.wav)
+        filterComplexParts.push(
+          `[1:a]adelay=${delayMs}|${delayMs}[${outputStream}]`
+        );
+        amixInputs += `[${outputStream}]`;
+      }
+
+      // Mix all delayed audio streams
+      const amixFilter = `${amixInputs}amix=inputs=${totalFrames}[a]`;
+      filterComplexParts.push(amixFilter);
+      const filterComplex = filterComplexParts.join(';');
+
       await ffmpeg.exec([
-        '-r',
-        '3',
+        '-y', // Overwrite output file
+        '-framerate',
+        String(config.FPS || 3),
         '-i',
-        `/vid/frame-%d.png`,
+        '/vid/frame-%d.png', // Video input pattern
         '-i',
-        '/shutter.wav',
+        '/shutter.wav', // Audio input
         '-filter_complex',
         filterComplex,
         '-map',
-        '[v]',
+        '0:v', // Map video from first input
         '-map',
-        '[a]',
+        '[a]', // Map audio from filtergraph
         '-c:v',
         'libx264',
-        '-c:a',
-        'aac',
-        '-y',
+        '-preset',
+        'medium',
+        '-pix_fmt',
+        'yuv420p',
+        '-r',
+        String(config.FPS || 3),
+        '-shortest', // End when shortest stream (video) ends
         'output.mp4',
       ]);
 
@@ -267,7 +309,6 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
         URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }))
       );
     } catch (error) {
-      // await ffmpegRef.current.deleteDir('/vid');
       toast({
         title: 'Error',
         message: 'Failed to render video',
@@ -307,29 +348,31 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
   const onValidSubmit = (config: Config) => {
     console.log('Form is valid, proceeding with config:', config);
 
-    const cleanVideoAndPreview = () => {
+    const clean = () => {
       const { preview, videoSrc } = useAppContext.getState();
       if (preview) {
         URL.revokeObjectURL(preview);
-        setVideoSrc(null);
+        setPreview(null);
       }
       if (videoSrc) {
         URL.revokeObjectURL(videoSrc!);
         setVideoSrc(null);
       }
+      setSnippetsReady(false);
+      setProgress(0);
     };
 
     if (config.Type === 'preview') {
       if (__DESKTOP__)
         return action(renderPreview, {
-          before: cleanVideoAndPreview,
+          before: clean,
           params: config,
         });
 
       //! Web
       action(renderPreviewWeb, {
         delay: 250,
-        before: cleanVideoAndPreview,
+        before: clean,
         params: config,
       });
       return;
@@ -337,14 +380,14 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
 
     if (__DESKTOP__)
       return action(renderVideo, {
-        before: cleanVideoAndPreview,
+        before: clean,
         params: config,
       });
 
     //! Web
     action(renderVideoWeb, {
       delay: 250,
-      before: cleanVideoAndPreview,
+      before: clean,
       params: config,
     });
   };
@@ -424,30 +467,6 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
               >
                 <ArrowUp />
                 Open Drawer
-              </Button>
-              <Button
-                type="button"
-                onClick={async () => {
-                  wasmWorkerRef
-                    .current!.getSnippets(getValues())
-                    .then(snippets => {
-                      console.log('Received snippets from worker:', snippets);
-                      // Handle the received snippets as needed
-                    })
-                    .catch(error => {
-                      console.error(
-                        'Error getting snippets from worker:',
-                        error
-                      );
-                      toast({
-                        title: 'Error',
-                        message: `Failed to get snippets: ${error.message}`,
-                        type: 'error',
-                      });
-                    });
-                }}
-              >
-                Get Snippets
               </Button>
             </div>
           </CardFooter>
