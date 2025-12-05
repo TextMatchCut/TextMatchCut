@@ -120,13 +120,13 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 m-4 justify-center">
         <div className="flex flex-col gap-1">
-          <Label htmlFor="font-size">Font Size</Label>
+          <Label htmlFor="font-size">Snippet Size</Label>
           <Input
-            className={cn('w-20', { 'border-red-500': errors.FontSize })}
+            className={cn('w-20', { 'border-red-500': errors.SnippetSize })}
             type="number"
-            {...register('FontSize', { valueAsNumber: true })}
+            {...register('SnippetSize', { valueAsNumber: true })}
           />
-          <FieldError error={errors.FontSize} />
+          <FieldError error={errors.SnippetSize} />
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="min-lines">Min Lines</Label>
@@ -138,14 +138,6 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
           <FieldError error={errors.MinLines} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label>Highlight Radius</Label>
-          <Input
-            className="w-20"
-            type="number"
-            {...register('HighlightRadius', { valueAsNumber: true })}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
           <Label>Max Lines</Label>
           <Input
             className={cn('w-20', { 'border-red-500': errors.MaxLines })}
@@ -153,6 +145,14 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
             {...register('MaxLines', { valueAsNumber: true })}
           />
           <FieldError error={errors.MaxLines} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label>Highlight Radius</Label>
+          <Input
+            className="w-20"
+            type="number"
+            {...register('HighlightRadius', { valueAsNumber: true })}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label>Vertical Spread</Label>
@@ -173,6 +173,15 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
             {...register('Feather', { valueAsNumber: true })}
           />
           <FieldError error={errors.Feather} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="font-size">Font Size</Label>
+          <Input
+            className={cn('w-20', { 'border-red-500': errors.FontSize })}
+            type="number"
+            {...register('FontSize', { valueAsNumber: true })}
+          />
+          <FieldError error={errors.FontSize} />
         </div>
         <div className="flex flex-col gap-1">
           <Label>Blur Radius</Label>

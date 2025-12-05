@@ -117,8 +117,8 @@ func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
 		a.cancelFunc = nil // Cleanup when function exits
 	}()
 
-	snippets := make([]types.TextSnippet, 0, 5)
-	for i := 0; i < 5; i++ {
+	snippets := make([]types.TextSnippet, 0, config.SnippetSize)
+	for i := 0; i < config.SnippetSize; i++ {
 		snippet := core.GenerateRandomTextSnippet(config)
 		snippets = append(snippets, snippet)
 	}
@@ -254,12 +254,16 @@ func generateUniqueFilename(prefix, extension string) string {
 // Generate video frames and return base64 data
 func generateFrames(ctx context.Context, config types.Config, aiSnippets []types.TextSnippet, a App) (string, string, error) {
 	if config.Verbose {
-		fmt.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
+		fmt.Printf("Generating video: %dx%d @ %dfps for %d snippets\n", config.Width, config.Height, config.FPS, len(aiSnippets))
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
 	}
-	log.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
+	log.Printf("Generating video: %dx%d @ %dfps with %d snippets\n", config.Width, config.Height, config.FPS, len(aiSnippets))
 
-	totalFrames := config.FPS * config.Duration
+	totalFrames := len(aiSnippets)
+
+	if totalFrames == 0 {
+		return "", "", fmt.Errorf("no snippets were generated, cannot create video")
+	}
 
 	// Create temporary directory for frames
 	tempDir := filepath.Join(os.TempDir(), "textmatchcut_frames_"+generateUniqueFilename("", ""))

@@ -1,13 +1,4 @@
 import { z } from 'zod';
-import { BlurType } from '@types';
-
-// Helper schemas for color validation
-const colorArraySchema = z.array(z.number().min(0).max(255)).length(4);
-// const hexColorSchema = z
-//   .string()
-//   .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format');
-
-const Providers = ['openai', 'gemini', 'anthropic'] as const;
 
 export const configSchema = z
   .object({
@@ -27,7 +18,6 @@ export const configSchema = z
       .number()
       .min(1, 'FPS must be at least 1.')
       .max(60, 'FPS cannot exceed 60.'),
-    Duration: z.number().min(1, 'Duration must be at least 1 second.'),
     FontSize: z
       .number()
       .min(8, 'Font size must be at least 8.')
@@ -76,7 +66,10 @@ export const configSchema = z
     Model: z.string().optional(),
     ApiKey: z.string().optional(),
     AIEnabled: z.boolean(),
-
+    SnippetSize: z
+      .number()
+      .min(1, 'Snippet size must be at least 1.')
+      .max(999, 'Snippet size cannot exceed 999.'),
     // Background implementation
     // BackgroundImpl: z.enum(['color', 'image'], {
     //   message: 'Please select background type.',

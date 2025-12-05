@@ -18,7 +18,7 @@ export const DEFAULT_HIGHLIGHT_COLOR = '#ffff00';
 export const DEFAULT_TEXT_COLOR = '#000000';
 export const DEFAULT_BACKGROUND_COLOR = '#ffffff';
 
-export const DEFAULT_BLUR_TYPE = BlurType.Horizontal;
+export const DEFAULT_BLUR_TYPE = BlurType.Directional;
 export const DEFAULT_BLUR_ANGLE = 45.0;
 export const DEFAULT_BLUR_RADIUS = 5.0;
 export const DEFAULT_FONT_SIZE = 60;
@@ -46,7 +46,7 @@ export const DEFAULT_CONFIG = {
   MaxLines: DEFAULT_MAX_LINES,
   VerticalSpread: DEFAULT_VERTICAL_SPREAD,
   Feather: DEFAULT_FEATHER,
-  Font: 'Roboto-Italic',
+  Font: 'Minecraft',
   BackgroundImage: '',
   AIEnabled: false,
   ApiKey: '',
@@ -55,11 +55,11 @@ export const DEFAULT_CONFIG = {
   Prompt: '',
   Verbose: false,
   SoundEffectPath: '',
-  Duration: 2,
   Type: 'preview',
   Sfx: 'sfx/shutter.wav',
   BackgroundImpl: 'image', // 'image' or 'solid'
   HighlightRadius: 300,
+  SnippetSize: 7,
 } as Config;
 
 export const REPO_URL = 'https://github.com/TextMatchCut/TextMatchCut';

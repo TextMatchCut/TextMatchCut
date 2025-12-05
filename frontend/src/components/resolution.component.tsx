@@ -115,20 +115,6 @@ const Resolution = () => {
             FPS
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <Input
-            type="number"
-            {...register('Duration', {
-              valueAsNumber: true,
-            })}
-            className={cn('max-w-[70px]', {
-              'border-red-500': errors.Duration,
-            })}
-          />
-          <span className="ml-1 text-sm text-muted-foreground relative -top-[1px]">
-            Duration
-          </span>
-        </div>
       </div>
     </div>
   );

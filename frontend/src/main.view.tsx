@@ -201,6 +201,7 @@ const MainView: React.FC = () => {
     input: GO_RenderFrameWeb_Input,
     /*JSON*/
     snippets: any,
+    config: Config,
     write: boolean = true
   ) {
     if (
@@ -237,7 +238,7 @@ const MainView: React.FC = () => {
     console.log('Image frame rendered:', i + 1);
     setPreview(`data:image/png;base64,${base64String}`);
     // FIXME:devided by 5 ?
-    const p = ((i + 1) / 5) * 100;
+    const p = ((i + 1) / config.SnippetSize) * 100;
     setProgress(p);
   }
 
@@ -262,7 +263,7 @@ const MainView: React.FC = () => {
         FrameNum: 1,
         Config: config,
       };
-      await renderFrameWeb(0, input, '', false);
+      await renderFrameWeb(0, input, '', config, false);
     } catch (err) {
       setStatus('error');
       toast({
@@ -293,7 +294,8 @@ const MainView: React.FC = () => {
       }
       setSnippetsReady(true);
 
-      const totalFrames = config.Duration! * (config.FPS || 3);
+      // FIXME: could be problematic if ai messes up
+      const totalFrames = config.SnippetSize;
 
       // Generate all frames
       for (let i = 0; i < totalFrames; i++) {
@@ -302,7 +304,7 @@ const MainView: React.FC = () => {
         }
         try {
           input.FrameNum = i + 1;
-          await renderFrameWeb(i, input, snippets);
+          await renderFrameWeb(i, input, snippets, config);
         } catch (err) {
           console.error('Error calling WASM function:', err);
           return toast({

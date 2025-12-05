@@ -29,7 +29,7 @@ const Prompt = () => {
   // const config = useAppContext(s => s.config);
   // const setConfig = useAppContext(s => s.setConfig);
   const [promptText, setPromptText] = useState(
-    "Respond with 5 different text snippets with the text '$HighlightedText'. Each snippet should have between $MinLines and $MaxLines sentences. Make sure that the highlighted text is not always at the start but random."
+    "Respond with $SnippetSize different text snippets with the text '$HighlightedText'. Each snippet should have between $MinLines and $MaxLines sentences. Make sure that the highlighted text is not always at the start but random."
   );
 
   const parsePrompt = (prompt: string) => {
@@ -44,7 +44,11 @@ const Prompt = () => {
       .replace(/\$Width/g, config?.Width?.toString() || '[Width]')
       .replace(/\$Height/g, config?.Height?.toString() || '[Height]')
       .replace(/\$FPS/g, config?.FPS?.toString() || '[FPS]')
-      .replace(/\$Font/g, config?.Font || '[Font]');
+      .replace(/\$Font/g, config?.Font || '[Font]')
+      .replace(
+        /\$SnippetSize/g,
+        config?.SnippetSize?.toString() || '[SnippetSize]'
+      );
   };
 
   const parsedText = parsePrompt(promptText);
@@ -198,8 +202,8 @@ const Prompt = () => {
               rows={4}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Available variables: $HighlightedText, $MinLines, $MaxLines,
-              $Duration, $Width, $Height, $FPS, $Font
+              Available variables: $SnippetSize, $HighlightedText, $MinLines,
+              $MaxLines, $Duration, $Width, $Height, $FPS, $Font
             </p>
           </div>
           <div className="mt-4">

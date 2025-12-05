@@ -4,7 +4,6 @@ export namespace types {
 	    Width: number;
 	    Height: number;
 	    FPS: number;
-	    Duration: number;
 	    HighlightedText: string;
 	    HighlightColor: string;
 	    TextColor: string;
@@ -29,6 +28,7 @@ export namespace types {
 	    BackgroundImpl: string;
 	    HighlightRadius: number;
 	    Prompt: string;
+	    SnippetSize: number;
 	    Type: string;
 	
 	    static createFrom(source: any = {}) {
@@ -40,7 +40,6 @@ export namespace types {
 	        this.Width = source["Width"];
 	        this.Height = source["Height"];
 	        this.FPS = source["FPS"];
-	        this.Duration = source["Duration"];
 	        this.HighlightedText = source["HighlightedText"];
 	        this.HighlightColor = source["HighlightColor"];
 	        this.TextColor = source["TextColor"];
@@ -65,6 +64,7 @@ export namespace types {
 	        this.BackgroundImpl = source["BackgroundImpl"];
 	        this.HighlightRadius = source["HighlightRadius"];
 	        this.Prompt = source["Prompt"];
+	        this.SnippetSize = source["SnippetSize"];
 	        this.Type = source["Type"];
 	    }
 	}

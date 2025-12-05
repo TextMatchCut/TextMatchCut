@@ -13,7 +13,6 @@ type Config struct {
 	Width           int     `json:"Width"`
 	Height          int     `json:"Height"`
 	FPS             int     `json:"FPS"`
-	Duration        int     `json:"Duration"`
 	HighlightedText string  `json:"HighlightedText"`
 	HighlightColor  string  `json:"HighlightColor"`
 	TextColor       string  `json:"TextColor"`
@@ -37,7 +36,8 @@ type Config struct {
 	Sfx             string  `json:"Sfx"`
 	BackgroundImpl  string  `json:"BackgroundImpl"`
 	HighlightRadius float64 `json:"HighlightRadius"`
-	Prompt          string  `json:"Prompt"` //
+	Prompt          string  `json:"Prompt"`
+	SnippetSize     int     `json:"SnippetSize"`
 	// not used in the backend
 	Type string `json:"Type"` // "preview" or "render"
 }

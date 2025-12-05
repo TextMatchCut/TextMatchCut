@@ -1022,8 +1022,8 @@ func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet,
 		}
 		aiSnippets = snippets
 	} else {
-		// fmt.Fprintf(os.Stderr, "Using provider random snippets\n")
-		for i := 0; i < 5; i++ {
+		fmt.Printf("Using provider random snippets\n")
+		for i := 0; i < config.SnippetSize; i++ {
 			snippet := GenerateRandomTextSnippet(config)
 			aiSnippets = append(aiSnippets, snippet)
 		}

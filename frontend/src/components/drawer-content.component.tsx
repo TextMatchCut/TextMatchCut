@@ -116,7 +116,7 @@ const DrawerContent: React.FC<{
                 src={videoSrc || undefined}
               ></video>
               <Button
-                className="mt-4"
+                className="mt-4 cursor-pointer"
                 type="button"
                 onClick={__DESKTOP__ ? showVideoLocation : downloadVideoWeb}
               >
