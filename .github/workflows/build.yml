@@ -1,0 +1,82 @@
+name: build
+
+on:
+  workflow_dispatch:
+  # push:
+  #   tags:
+  #     - "v*"
+
+env:
+  # Necessary for most environments as build failure can occur due to OOM issues
+  NODE_OPTIONS: "--max-old-space-size=4096"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        build:
+          - name: "TextMatchCut"
+            platform: "linux/amd64"
+            os: "ubuntu-latest"
+          - name: "TextMatchCut"
+            platform: "windows/amd64"
+            os: "windows-latest"
+          - name: "TextMatchCut"
+            platform: "darwin/universal"
+            os: "macos-latest"
+
+    runs-on: ${{ matrix.build.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Build wails
+        uses: dAppServer/wails-build-action@v2.2
+        id: build
+        with:
+          build-name: ${{ matrix.build.name }}
+          build-platform: ${{ matrix.build.platform }}
+          package: false
+          go-version: "1.24"
+
+      - name: Install create-dmg
+        if: matrix.build.os == 'macos-latest'
+        run: |
+          brew install create-dmg
+
+      - name: Create DMG
+        if: matrix.build.os == 'macos-latest'
+        run: |
+          mkdir -p dist
+          # create-dmg --volname "TextMatchCut" --volicon "resources/icon/app-icon/icon.icns" --window-pos 200 120 --window-size 600 400 --app-drop-link 425 190 "dist/Text-Match-Cut-${{ github.ref_name }}.dmg" "build/bin/TextMatchCut.app"
+          create-dmg --volname "TextMatchCut" --volicon "resources/icon/app-icon/icon.icns" --window-pos 200 120 --window-size 600 400 --app-drop-link 425 190 "dist/Text-Match-Cut-dev.dmg" "build/bin/TextMatchCut.app"
+
+      - name: Upload Artifact DMG
+        if: matrix.build.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist/*.dmg
+
+      - name: Upload Artifact
+        if: matrix.build.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          path: build/bin/*
+
+  # release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download all release assets
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         path: release-assets
+
+  #     - name: Create Release and Upload Assets
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         # This will grab all the files downloaded in the previous step
+  #         files: release-assets/*/*

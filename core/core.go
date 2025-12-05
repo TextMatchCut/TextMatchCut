@@ -107,7 +107,6 @@ func generateUniqueFilename(prefix, extension string) string {
 func createTextImageFrame(config types.Config, snippet types.TextSnippet, highlightCenterX, highlightCenterY float64) (image.Image, error) {
 	// Create context
 	dc := gg.NewContext(config.Width, config.Height)
-	fmt.Printf("Background color: %v\n", config.BackgroundColor)
 	if config.BackgroundImpl == "image" {
 		data, err := base64.StdEncoding.DecodeString(config.BackgroundImage)
 		if err != nil {

@@ -13,6 +13,7 @@ const StatusBar: React.FC = () => {
         <div className="px-2 py-1">Status: {status}</div>
 
         <div className="flex items-center justify-center">
+          <div className="hover:bg-gray-700 px-2 py-1">v{__APP_VERSION__}</div>
           <div
             className="cursor-pointer hover:bg-gray-700 px-2 py-1"
             onClick={() => OpenURL('https://uncore.me/donate')}

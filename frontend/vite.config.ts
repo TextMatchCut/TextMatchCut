@@ -92,7 +92,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       __DESKTOP__: String(__DESKTOP__),
-      __APP_VERSION__: String(process.env.__APP_VERSION__ || '"0.1.0"'),
+      __APP_VERSION__: String(process.env.__APP_VERSION__ || '"dev"'),
     },
     server: {
       headers: {
