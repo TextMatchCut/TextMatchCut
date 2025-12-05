@@ -14,23 +14,16 @@ import { Label } from './ui/label';
 import toast from '@/lib/toast';
 import { PickAudioFile } from '../../wailsjs/go/main/App';
 import { useFormContext } from 'react-hook-form';
-import { DEFAULT_CONFIG } from '@constants';
 
-const INITIAL_SFX_OPTIONS = [
-  'sfx/shutter.wav',
-  'sfx/shutter1.wav',
-  'sfx/shutter2.wav',
-];
+const INITIAL_SFX_OPTIONS = ['sfx/shutter.wav', 'sfx/shutter1.wav'];
 let cleanup: (() => void) | null = null;
 const Sfx = () => {
-  // const config = useAppContext(s => s.config);
   const { setValue, watch } = useFormContext();
   const [sfxOptions, setSfxOptions] = useState(INITIAL_SFX_OPTIONS);
   const value = watch('Sfx');
 
   const howlerInstance = useRef<Howl | null>(null);
 
-  // Initialize Howl instance only once when component mounts
   useEffect(() => {
     const howl = new Howl({
       src: ['sfx/shutter.wav'],
@@ -94,11 +87,11 @@ const Sfx = () => {
       },
       onloaderror: (id, error) => {
         console.error('Failed to load audio:', error);
-        toast({
-          message: 'Failed to load the selected audio file',
-          type: 'error',
-          title: 'Error',
-        });
+        // toast({
+        //   message: 'Failed to load the selected audio file',
+        //   type: 'error',
+        //   title: 'Error',
+        // });
       },
       onplayerror: (id, error) => {
         console.error('Failed to play audio:', error);
@@ -117,6 +110,9 @@ const Sfx = () => {
         const res = await PickAudioFile();
         if (res.success && res.path) {
           setSfxOptions(prev => [...prev, res.path!]);
+          setValue('Sfx', res.path!);
+
+          // FIXME: this needs work
           changeSfx(
             res.path!.split('.').pop()!,
             'custom',
@@ -125,18 +121,17 @@ const Sfx = () => {
               .pop()!};base64,${res.audioData!}`,
             true
           );
-          setValue('Sfx', res.path!);
         }
         return;
       }
       changeSfx('wav', value, value);
     } catch (error) {
       console.error('Error picking audio file:', error);
-      toast({
-        message: 'Failed to pick audio file',
-        type: 'error',
-        title: 'Error',
-      });
+      // toast({
+      //   message: 'Failed to pick audio file',
+      //   type: 'error',
+      //   title: 'Error',
+      // });
     }
   };
 

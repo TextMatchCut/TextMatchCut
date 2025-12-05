@@ -15,6 +15,12 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed all:frontend/public/sfx
+var sfxAssets embed.FS
+
+//go:embed all:frontend/public/img
+var imgAssets embed.FS
+
 //go:embed build/appicon.png
 var icon []byte
 
@@ -22,12 +28,12 @@ func main() {
 	// Create an instance of the app structure
 
 	// save sfx and img assets so ffmpeg can access it
-	err := writeAssets("sfx")
+	err := writeAssets("sfx", sfxAssets)
 	if err != nil {
 		println("Error writing sfx assets:", err.Error())
 		return
 	}
-	err = writeAssets("img")
+	err = writeAssets("img", imgAssets)
 	if err != nil {
 		println("Error writing img assets:", err.Error())
 		return
@@ -64,13 +70,13 @@ func main() {
 	}
 }
 
-func writeAssets(dir string) error {
+func writeAssets(dir string, fs embed.FS) error {
 	tempSubDir := filepath.Join(os.TempDir(), "textmatchcut", dir)
 	err := os.MkdirAll(tempSubDir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create temp subdirectory: %v", err)
 	}
-	res, err := assets.ReadDir(fmt.Sprintf("frontend/dist/%s", dir))
+	res, err := fs.ReadDir(fmt.Sprintf("frontend/public/%s", dir))
 	if err != nil {
 		println("Error:", err.Error())
 		return err
@@ -81,7 +87,7 @@ func writeAssets(dir string) error {
 		if file.IsDir() {
 			continue
 		}
-		src, err := assets.ReadFile(fmt.Sprintf("frontend/dist/%s/%s", dir, file.Name()))
+		src, err := fs.ReadFile(fmt.Sprintf("frontend/public/%s/%s", dir, file.Name()))
 		if err != nil {
 			println("Error reading file:", err.Error())
 			return err

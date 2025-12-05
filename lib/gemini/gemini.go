@@ -18,6 +18,7 @@ var (
 	geminiClientInstance *genai.Client
 	configOnce           sync.Once
 	clientOnce           sync.Once
+	prevApiKey           string
 )
 
 func getGeminiConfig() *genai.GenerateContentConfig {
@@ -38,6 +39,7 @@ func getGeminiConfig() *genai.GenerateContentConfig {
 	return geminiConfigInstance
 }
 
+// FIXME: could be implemented better
 func getGeminiClient(ctx context.Context) (*genai.Client, error) {
 	var err error
 	clientOnce.Do(func() {
@@ -47,7 +49,12 @@ func getGeminiClient(ctx context.Context) (*genai.Client, error) {
 }
 
 func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet, error) {
-	os.Setenv("GEMINI_API_KEY", config.ApiKey)
+	if prevApiKey != config.ApiKey {
+		os.Setenv("GEMINI_API_KEY", config.ApiKey)
+		// reset client so it picks up new API key
+		clientOnce = sync.Once{}
+		prevApiKey = config.ApiKey
+	}
 	client, err := getGeminiClient(ctx)
 	if err != nil {
 		return nil, err

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"image/png"
@@ -19,6 +18,7 @@ import (
 	go_runtime "runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -411,13 +411,21 @@ func generateFrames(ctx context.Context, config types.Config, aiSnippets []types
 	amixFilter := fmt.Sprintf("%samix=inputs=%d[a]", amixInputs, totalFrames)
 	filterComplexParts = append(filterComplexParts, amixFilter)
 	filterComplex := strings.Join(filterComplexParts, ";")
-	shutterPath := filepath.Join(os.TempDir(), "textmatchcut", "sfx", "shutter.wav")
+
+	var sfxPath string
+	if filepath.IsAbs(config.Sfx) {
+		// If the path is absolute, it's a custom user-picked file. Use it directly.
+		sfxPath = config.Sfx
+	} else {
+		sfxPath = filepath.Join(os.TempDir(), "textmatchcut", config.Sfx)
+	}
+
 	fmt.Println("Using ffmpeg path " + ffmpegPath)
 	cmd = exec.CommandContext(ctx, ffmpegPath,
 		"-y", // Overwrite output file
 		"-framerate", strconv.Itoa(config.FPS),
 		"-i", filepath.Join(tempDir, "frame_%05d.png"), // Video input
-		"-i", shutterPath, // Audio input
+		"-i", sfxPath, // Audio input
 		"-filter_complex", filterComplex,
 		"-map", "0:v", // Map video from first input
 		"-map", "[a]", // Map audio from filtergraph
@@ -428,6 +436,11 @@ func generateFrames(ctx context.Context, config types.Config, aiSnippets []types
 		"-shortest", // End encoding when the shortest stream (video) ends
 		outputPath,
 	)
+
+	/* hides the console window on Windows, because it looks ugly */
+	if go_runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	}
 
 	if config.Verbose {
 		fmt.Printf("Running FFmpeg command: %s\n", strings.Join(cmd.Args, " "))
@@ -442,52 +455,14 @@ func generateFrames(ctx context.Context, config types.Config, aiSnippets []types
 
 	fmt.Printf("Video created successfully: %s\n", outputPath)
 
-	// --- NEW LOGIC ---
-	// 1. Read the generated file into a byte slice
 	fileBytes, err := os.ReadFile(outputPath)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to read generated video file: %v", err)
 	}
 
-	// 2. Encode the byte slice to a Base64 string
 	base64String := base64.StdEncoding.EncodeToString(fileBytes)
 
-	// 3. Return the base64 string instead of the path
 	return base64String, fDir, nil
-}
-
-/* dont remove usefull in development */
-func getDummySnippets(config types.Config) []types.TextSnippet {
-	data, err := os.ReadFile("dummy.json")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading dummy.json: %v\n", err)
-		os.Exit(1)
-	}
-	if config.Verbose {
-		fmt.Printf("Parsed configuration: %+v\n", config)
-	}
-	fmt.Printf("Dummy data looks like this: %s\n", string(data))
-	var snippets []types.AITextSnippets
-	json.Unmarshal(data, &snippets)
-
-	//convert AI snippets to TextSnippet format
-	aiSnippets := make([]types.TextSnippet, len(snippets))
-	for i, snippet := range snippets {
-		lines := strings.Split(snippet.Text, ".")
-		highlightIndex := -1
-		for j, line := range lines {
-			if strings.Contains(line, config.HighlightedText) {
-				highlightIndex = j
-				break
-			}
-		}
-		aiSnippets[i] = types.TextSnippet{
-			Lines:          lines,
-			HighlightIndex: highlightIndex,
-		}
-	}
-
-	return aiSnippets
 }
 
 func (a *App) ShowFileOnExplorer(filePath string) {

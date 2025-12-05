@@ -5,3 +5,5 @@ https://www.dafont.com/minecraft.font
 
 Background Image are taken from the following link:
 https://www.freepik.com/free-photo/white-paper-texture_1012237.htm#fromView=keyword&page=1&position=1&uuid=19525ec7-ddbd-421f-b1be-0d1208d51fe3&query=Newspaper+Texture
+
+shutter1 was taken from Sound Effect by <a href="https://pixabay.com/users/voicebosch-30143949/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=187326">Otto</a> from <a href="https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=187326">Pixabay</a>
