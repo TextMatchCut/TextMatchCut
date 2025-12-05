@@ -77,6 +77,8 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install create-dmg
+          #sometimes logo is messed up, idk why
+          cp resources/icon/app-icon/icon.icns build/bin/TextMatchCut.app/Contents/Resources/iconfile.icns
           mkdir -p dist
           create-dmg \
             --volname "TextMatchCut" \
