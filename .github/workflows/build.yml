@@ -1,67 +1,118 @@
-name: build
+name: Build and Release
 
 on:
   workflow_dispatch:
-  # push:
-  #   tags:
-  #     - "v*"
+  push:
+    tags:
+      - "v*"
 
 env:
-  # Necessary for most environments as build failure can occur due to OOM issues
   NODE_OPTIONS: "--max-old-space-size=4096"
+
+permissions:
+  contents: write
 
 jobs:
   build:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        build:
-          - name: "TextMatchCut"
-            platform: "linux/amd64"
-            os: "ubuntu-latest"
-          - name: "TextMatchCut"
-            platform: "windows/amd64"
-            os: "windows-latest"
-          - name: "TextMatchCut"
-            platform: "darwin/universal"
-            os: "macos-latest"
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            platform: linux/amd64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            platform: windows/amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: universal
+            platform: darwin/universal
 
-    runs-on: ${{ matrix.build.os }}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
+        uses: actions/checkout@v4
 
-      - name: Build wails
-        uses: dAppServer/wails-build-action@v2.2
-        id: build
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          build-name: ${{ matrix.build.name }}
-          build-platform: ${{ matrix.build.platform }}
-          package: false
-          go-version: "1.24"
+          go-version: "1.22"
 
-      - name: Install create-dmg
-        if: matrix.build.os == 'macos-latest'
+      - name: Setup Bun
+        # if: runner.os != 'Windows'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # - name: Setup Bun (Windows)
+      #   if: runner.os == 'Windows'
+      #   run: |
+      #     powershell -c "irm bun.sh/install.ps1|iex"
+      #     echo "$env:USERPROFILE\.bun\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Add Go bin to PATH (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Add Go bin to PATH (Windows)
+        if: runner.os == 'Windows'
+        run: echo "$env:USERPROFILE\go\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - name: Build Wails App
+        run: wails build
+
+      - name: Create DMG (macOS only)
+        if: runner.os == 'macOS'
         run: |
           brew install create-dmg
-
-      - name: Create DMG
-        if: matrix.build.os == 'macos-latest'
-        run: |
           mkdir -p dist
-          # create-dmg --volname "TextMatchCut" --volicon "resources/icon/app-icon/icon.icns" --window-pos 200 120 --window-size 600 400 --app-drop-link 425 190 "dist/Text-Match-Cut-${{ github.ref_name }}.dmg" "build/bin/TextMatchCut.app"
-          create-dmg --volname "TextMatchCut" --volicon "resources/icon/app-icon/icon.icns" --window-pos 200 120 --window-size 600 400 --app-drop-link 425 190 "dist/Text-Match-Cut-dev.dmg" "build/bin/TextMatchCut.app"
+          create-dmg \
+            --volname "TextMatchCut" \
+            --volicon "resources/icon/app-icon/icon.icns" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --app-drop-link 425 190 \
+            "dist/TextMatchCut-${{ github.ref_name || 'dev' }}.dmg" \
+            "build/bin/TextMatchCut.app"
 
-      - name: Upload Artifact DMG
-        if: matrix.build.os == 'macos-latest'
+      - name: Upload Artifacts (Windows/Linux)
+        if: runner.os != 'macOS'
         uses: actions/upload-artifact@v4
         with:
+          name: TextMatchCut-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/bin/*
+
+      - name: Upload Artifacts (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TextMatchCut-darwin-universal
           path: dist/*.dmg
 
-      - name: Upload Artifact
-        if: matrix.build.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          path: build/bin/*
+  # release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   if: startsWith(github.ref, 'refs/tags/')
+  #   steps:
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: release-assets
+
+  #     - name: Create Release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         files: release-assets/**/*
+  #         fail_on_unmatched_files: false
