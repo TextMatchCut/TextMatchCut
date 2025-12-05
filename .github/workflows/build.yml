@@ -65,18 +65,3 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: build/bin/*
-
-  # release:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Download all release assets
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         path: release-assets
-
-  #     - name: Create Release and Upload Assets
-  #       uses: softprops/action-gh-release@v1
-  #       with:
-  #         # This will grab all the files downloaded in the previous step
-  #         files: release-assets/*/*
