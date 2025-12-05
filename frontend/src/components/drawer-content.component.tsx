@@ -7,7 +7,9 @@ import { ShowFileOnExplorer } from '../../wailsjs/go/main/App';
 import { useShallow } from 'zustand/react/shallow';
 import { Spinner } from './ui/spinner';
 
-const DrawerContent = () => {
+const DrawerContent: React.FC<{
+  cancelFunc: () => void;
+}> = ({ cancelFunc }) => {
   const { status, preview, videoSrc, videoOutputPath, snippetsReady } =
     useAppContext(
       useShallow(s => ({
@@ -82,16 +84,27 @@ const DrawerContent = () => {
                   />
                 </div>
               </PhotoView>
-
-              <Button
-                className="mt-4"
-                type="submit"
-                onClick={() => {
-                  setValue('Type', 'render' as const);
-                }}
-              >
-                Render Full Video
-              </Button>
+              {status === 'processing' ? null : (
+                <div className="flex gap-4 mt-4 items-center justify-center">
+                  <Button
+                    variant="outline"
+                    className="max-w-sm cursor-pointer"
+                    title="Try the last action again"
+                    type="submit"
+                  >
+                    Try again
+                  </Button>
+                  <Button
+                    className="max-w-sm cursor-pointer"
+                    type="submit"
+                    onClick={() => {
+                      setValue('Type', 'render' as const);
+                    }}
+                  >
+                    Render Full Video
+                  </Button>
+                </div>
+              )}
             </>
           ) : null}
           {videoSrc ? (
@@ -110,6 +123,18 @@ const DrawerContent = () => {
                 {videoOutputPath ? 'Show Video Location' : 'Download Video'}
               </Button>
             </>
+          ) : null}
+
+          {status === 'processing' ? (
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="outline"
+                className="max-w-sm cursor-pointer"
+                onClick={cancelFunc}
+              >
+                Cancel
+              </Button>
+            </div>
           ) : null}
         </div>
       </PhotoProvider>

@@ -11,7 +11,7 @@ export const FONT_OPTIONS = [
 
 export const DEFAULT_WIDTH = 1920;
 export const DEFAULT_HEIGHT = 1080;
-export const DEFAULT_FPS = 3;
+export const DEFAULT_FPS = 4;
 export const DEFAULT_HIGHLIGHTED_TEXT = 'Web Dev';
 
 export const DEFAULT_HIGHLIGHT_COLOR = '#ffff00';
@@ -25,7 +25,7 @@ export const DEFAULT_FONT_SIZE = 60;
 export const DEFAULT_MIN_LINES = 5;
 export const DEFAULT_MAX_LINES = 10;
 export const DEFAULT_VERTICAL_SPREAD = 1.5;
-export const DEFAULT_FEATHER = 0.5;
+export const DEFAULT_FEATHER = 0.9;
 
 export const DEFAULT_SUGGESTED_GEMINI_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_SUGGESTED_OPENAI_MODEL = 'gpt-3.5-turbo';
@@ -62,4 +62,4 @@ export const DEFAULT_CONFIG = {
   HighlightRadius: 300,
 } as Config;
 
-export const REPO_URL = 'https://github.com/uncor3/text-match-cut';
+export const REPO_URL = 'https://github.com/TextMatchCut/TextMatchCut';

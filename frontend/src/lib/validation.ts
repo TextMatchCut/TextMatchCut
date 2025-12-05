@@ -18,11 +18,11 @@ export const configSchema = z
     Width: z
       .number()
       .min(100, 'Width must be at least 100px.')
-      .max(4000, 'Width cannot exceed 4000px.'),
+      .max(9999, 'Width cannot exceed 9999px.'),
     Height: z
       .number()
       .min(100, 'Height must be at least 100px.')
-      .max(4000, 'Height cannot exceed 4000px.'),
+      .max(9999, 'Height cannot exceed 9999px.'),
     FPS: z
       .number()
       .min(1, 'FPS must be at least 1.')

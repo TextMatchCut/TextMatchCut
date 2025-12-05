@@ -4,6 +4,7 @@ import {
   Run,
   RenderPreview,
   GetDefaultAssetsPath,
+  Cancel,
 } from '../wailsjs/go/main/App';
 import { fetchFile } from '@ffmpeg/util';
 import {
@@ -33,8 +34,10 @@ import { Config, GO_RenderFrameWeb_Input, GOWorkerType } from '@types';
 import { useShallow } from 'zustand/react/shallow';
 import GOWorker from './worker.ts?worker';
 import { GetSnippetsWeb } from '@/lib/snippet';
+import Drawer from './components/drawer.component';
+import DrawerContent from './components/drawer-content.component';
 
-const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
+const MainView: React.FC = () => {
   const {
     toggleDrawer,
     setStatus,
@@ -45,17 +48,21 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
     setVideoOutputPath,
     setVideoSrc,
     setSnippetsReady,
+    canceled,
+    setCanceled,
   } = useAppContext(
     useShallow(s => ({
       toggleDrawer: s.toggleDrawer,
       setStatus: s.setStatus,
       status: s.status,
       ffmpeg: s.ffmpeg,
+      canceled: s.canceled,
       setProgress: s.setProgress,
       setPreview: s.setPreview,
       setVideoOutputPath: s.setVideoOutputPath,
       setVideoSrc: s.setVideoSrc,
       setSnippetsReady: s.setSnippetsReady,
+      setCanceled: s.setCanceled,
     }))
   );
   // TODO: add cancellation support for web
@@ -136,8 +143,10 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
           title: 'Error',
         });
       }
+      console.log('App is ready');
       setStatus('ready');
     }
+    console.log('Is desktop:', __DESKTOP__);
     __DESKTOP__ ? init() : initWeb();
     // let saveInterval = setInterval(() => {
     //   console.log('Saving app state to localStorage...');
@@ -149,17 +158,41 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
     };
   }, []);
 
+  const handleCancel = () => {
+    console.log('Cancellation requested.');
+    setCanceled(true);
+    if (__DESKTOP__) {
+      Cancel();
+    } else {
+      abortControllerRef.current?.abort();
+    }
+    setStatus('ready');
+    setProgress(0);
+    setPreview(null);
+  };
+
   async function renderFrame(input: any) {
     console.log('Rendering frame with input:', input);
     const res = await RenderPreview(input);
 
+    console.log('State after renderFrame call:', useAppContext.getState());
+    if (
+      abortControllerRef.current?.signal.aborted ||
+      useAppContext.getState().canceled
+    ) {
+      return;
+    }
+
     if (!res.success) {
+      if (res.error?.includes('cancelled')) return;
       return toast({
         title: 'Error',
         message: res.error || 'Failed to render preview',
         type: 'error',
       });
     }
+    console.log('Setting preview');
+
     setPreview(`data:image/png;base64,${res.frameData!}`);
   }
 
@@ -170,12 +203,23 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
     snippets: any,
     write: boolean = true
   ) {
+    if (
+      abortControllerRef.current?.signal.aborted ||
+      useAppContext.getState().canceled
+    ) {
+      return;
+    }
+
     const frame = `/vid/frame-${i + 1}.png`;
     console.log({ input });
     const base64String = await wasmWorkerRef.current!.renderFrameWeb(
       input,
       snippets
     );
+    if (abortControllerRef.current?.signal.aborted) {
+      return;
+    }
+
     if (write) {
       try {
         await ffmpeg.writeFile(
@@ -187,8 +231,12 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
       }
     }
 
+    if (abortControllerRef.current?.signal.aborted) {
+      return;
+    }
     console.log('Image frame rendered:', i + 1);
     setPreview(`data:image/png;base64,${base64String}`);
+    // FIXME:devided by 5 ?
     const p = ((i + 1) / 5) * 100;
     setProgress(p);
   }
@@ -226,6 +274,8 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
     }
   }
   async function renderVideoWeb(config: Config) {
+    const signal = abortControllerRef.current?.signal;
+    if (!signal) return;
     try {
       const input = {
         FrameNum: -1,
@@ -233,13 +283,23 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
       };
 
       // Get snippets once before the loop
-      const snippets = await GetSnippetsWeb(input.Config);
+      const snippets = await GetSnippetsWeb(input.Config, signal);
+      if (!snippets || !Array.isArray(snippets) || snippets.length === 0) {
+        return toast({
+          title: 'Error',
+          message: 'No snippets available, check your api key and prompt.',
+          type: 'error',
+        });
+      }
       setSnippetsReady(true);
 
       const totalFrames = config.Duration! * (config.FPS || 3);
 
       // Generate all frames
       for (let i = 0; i < totalFrames; i++) {
+        if (signal.aborted) {
+          throw new DOMException('Aborted by user', 'AbortError');
+        }
         try {
           input.FrameNum = i + 1;
           await renderFrameWeb(i, input, snippets);
@@ -274,31 +334,35 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
       filterComplexParts.push(amixFilter);
       const filterComplex = filterComplexParts.join(';');
 
-      await ffmpeg.exec([
-        '-y', // Overwrite output file
-        '-framerate',
-        String(config.FPS || 3),
-        '-i',
-        '/vid/frame-%d.png', // Video input pattern
-        '-i',
-        '/shutter.wav', // Audio input
-        '-filter_complex',
-        filterComplex,
-        '-map',
-        '0:v', // Map video from first input
-        '-map',
-        '[a]', // Map audio from filtergraph
-        '-c:v',
-        'libx264',
-        '-preset',
-        'medium',
-        '-pix_fmt',
-        'yuv420p',
-        '-r',
-        String(config.FPS || 3),
-        '-shortest', // End when shortest stream (video) ends
-        'output.mp4',
-      ]);
+      await ffmpeg.exec(
+        [
+          '-y', // Overwrite output file
+          '-framerate',
+          String(config.FPS || 3),
+          '-i',
+          '/vid/frame-%d.png', // Video input pattern
+          '-i',
+          '/shutter.wav', // Audio input
+          '-filter_complex',
+          filterComplex,
+          '-map',
+          '0:v', // Map video from first input
+          '-map',
+          '[a]', // Map audio from filtergraph
+          '-c:v',
+          'libx264',
+          '-preset',
+          'medium',
+          '-pix_fmt',
+          'yuv420p',
+          '-r',
+          String(config.FPS || 3),
+          '-shortest', // End when shortest stream (video) ends
+          'output.mp4',
+        ],
+        undefined,
+        { signal }
+      );
 
       const fileData = await ffmpeg.readFile('output.mp4');
       console.log('Output file read successfully:', fileData);
@@ -309,6 +373,10 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
         URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }))
       );
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.log('Render video (web) cancelled successfully.');
+        return; // Suppress error toast on cancellation
+      }
       toast({
         title: 'Error',
         message: 'Failed to render video',
@@ -320,7 +388,8 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
 
   async function renderVideo(config: Config) {
     console.log('Rendering video with config:', config);
-    EventsOn('frame', args => {
+    const unsub = EventsOn('frame', args => {
+      if (useAppContext.getState().canceled) return;
       const { frameNum, totalFrames, frameData } = args;
       const p = (frameNum / totalFrames) * 100;
       setProgress(p);
@@ -330,6 +399,11 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
     return await Run(config)
       .then(async res => {
         if (!res.success) {
+          if (res.error?.includes('cancelled')) {
+            console.log('Desktop operation cancelled.');
+            unsub();
+            return;
+          }
           return toast({
             title: 'Error',
             message: res.error || 'Failed to render video',
@@ -340,13 +414,13 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
         setVideoSrc(`data:video/mp4;base64,${res.videoData!}`);
         setVideoOutputPath(res.path!);
       })
-      .finally(() => {
-        EventsOff('frameRendered');
-      });
+      .finally(unsub);
   }
 
   const onValidSubmit = (config: Config) => {
     console.log('Form is valid, proceeding with config:', config);
+    abortControllerRef.current = new AbortController();
+    setCanceled(false);
 
     const clean = () => {
       const { preview, videoSrc } = useAppContext.getState();
@@ -415,7 +489,7 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
           <CardHeader>
             {!__DESKTOP__ && <CardTitle>Generate Text Cut Match</CardTitle>}
             <CardDescription className="w-[70%] m-auto">
-              This tool generates a video with text cut matches based on the
+              This app generates a video with text cut matches based on the
               provided snippets. Change the settings below to customize the
               output.
             </CardDescription>
@@ -423,7 +497,6 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
           <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto rounded-lg p-4">
             <ConfigForm />
           </CardContent>
-
           <CardFooter className="m-auto h-[100px]">
             <div className="flex fixed bottom-[3rem] left-1/2 transform -translate-x-1/2 gap-2 backdrop-blur-sm bg-white/10 w-fit p-2 px-4 rounded-2xl">
               <Button
@@ -456,7 +529,7 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
                     hidden: !loading,
                   })}
                 />
-                Preview
+                Preview Frame
               </Button>
 
               <Button
@@ -471,7 +544,9 @@ const MainView: React.FC<{ drawer: React.ReactNode }> = ({ drawer }) => {
             </div>
           </CardFooter>
         </Card>
-        {drawer}
+        <Drawer>
+          <DrawerContent cancelFunc={handleCancel} />
+        </Drawer>
       </form>
     </FormProvider>
   );

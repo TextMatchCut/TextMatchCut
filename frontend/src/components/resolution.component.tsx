@@ -8,10 +8,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import clsx from 'clsx';
-import { useState } from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useEffect, useState } from 'react';
+import { useFormContext } from 'react-hook-form';
 import { cn } from '@/lib/utils';
-
 const Resolution = () => {
   const {
     control,
@@ -22,7 +21,6 @@ const Resolution = () => {
   } = useFormContext();
 
   const [custom, setCustom] = useState(false);
-
   // Watch the current width and height values
   const currentWidth = watch('Width');
   const currentHeight = watch('Height');
@@ -44,6 +42,14 @@ const Resolution = () => {
     setValue('Width', parseInt(w));
     setValue('Height', parseInt(h));
   }
+
+  useEffect(() => {
+    if (getCurrentResolution() === 'custom') {
+      setCustom(true);
+    } else {
+      setCustom(false);
+    }
+  }, [currentWidth, currentHeight]);
 
   return (
     <div className="flex flex-col gap-2 m-auto mt-4">

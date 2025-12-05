@@ -26,8 +26,8 @@ const StatusBar: React.FC = () => {
             Repo
             <GithubIcon className="w-4 h-4" />
           </div>
-          <div className={cn({ hidden: !elapsedTime })}>
-            Elapsed Time: {elapsedTime}
+          <div className={cn({ hidden: !elapsedTime }, 'px-2 py-1')}>
+            Elapsed Time: {Math.floor(elapsedTime)}s
           </div>
         </div>
       </div>

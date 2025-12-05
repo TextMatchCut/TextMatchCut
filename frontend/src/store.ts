@@ -13,6 +13,7 @@ const useAppContext = create<{
   videoSrc: string | null;
   videoOutputPath: string | null;
   snippetsReady: boolean;
+  canceled: boolean;
   setStatus: (status: Status) => void;
   setElapsedTime: (elapsedTime: number) => void;
   setOpenDrawer: (openDrawer: boolean) => void;
@@ -22,6 +23,7 @@ const useAppContext = create<{
   setVideoOutputPath: (videoOutputPath: string | null) => void;
   setBlurType: (blurType: BlurType) => void;
   setSnippetsReady: (snippetsReady: boolean) => void;
+  setCanceled: (canceled: boolean) => void;
   toggleDrawer: () => void;
 }>(set => ({
   blurType: BlurType.Horizontal,
@@ -35,6 +37,7 @@ const useAppContext = create<{
   videoSrc: null,
   videoOutputPath: null,
   snippetsReady: false,
+  canceled: false,
   setVideoOutputPath: (videoOutputPath: string | null) =>
     set({ videoOutputPath }),
   setVideoSrc: (videoSrc: string | null) => set({ videoSrc }),
@@ -45,6 +48,7 @@ const useAppContext = create<{
   setOpenDrawer: (openDrawer: boolean) => set({ openDrawer }),
   setProgress: (progress: number) => set({ progress }),
   setSnippetsReady: (snippetsReady: boolean) => set({ snippetsReady }),
+  setCanceled: (canceled: boolean) => set({ canceled }),
   toggleDrawer: () => set(state => ({ openDrawer: !state.openDrawer })),
 }));
 

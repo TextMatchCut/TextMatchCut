@@ -21,31 +21,39 @@ function getOpenAIClient(apiKey: string): OpenAI {
   return openaiClient;
 }
 
-export async function GetSnippetsOpenAIWeb(config: Config) {
+export async function GetSnippetsOpenAIWeb(
+  config: Config,
+  signal: AbortSignal
+) {
   const client = getOpenAIClient(config.ApiKey!);
 
   const prompt =
     config.Prompt + '(Respond in JSON array format: [{"text": "..."}, ...] )';
   console.log('Prompt for AI:', prompt);
 
-  const completion = await client.chat.completions.create({
-    model: config.Model || 'gpt-3.5-turbo',
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  });
+  const completion = await client.chat.completions.create(
+    {
+      model: config.Model || 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    },
+    { signal }
+  );
+
+  if (signal.aborted) {
+    return;
+  }
 
   if (!completion.choices || completion.choices.length === 0) {
-    throw new Error('No choices returned from OpenAI');
+    return;
   }
 
   const responseContent = completion.choices[0].message?.content;
-  if (!responseContent) {
-    throw new Error('No content in OpenAI response');
-  }
+  if (!responseContent) return;
 
   const rawData = JSON.parse(responseContent);
   const validatedData = snippetsArraySchema.parse(rawData);

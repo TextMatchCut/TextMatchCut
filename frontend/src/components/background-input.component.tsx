@@ -21,9 +21,16 @@ const BackgroundInput = () => {
     if (file) {
       const reader = new FileReader();
       reader.onload = e => {
-        const base64Font = e.target?.result as string;
-        setSrc(base64Font);
-        setValue('BackgroundImage', base64Font.split(',')[1]);
+        const base64Image = e.target?.result as string;
+        setSrc(base64Image);
+        setValue('BackgroundImage', base64Image.split(',')[1]);
+
+        const img = new Image();
+        img.src = base64Image;
+        img.onload = () => {
+          setValue('Width', img.width, { shouldValidate: true });
+          setValue('Height', img.height, { shouldValidate: true });
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -103,11 +110,14 @@ const BackgroundInput = () => {
           </PhotoProvider>
         </TabsContent>
         <TabsContent value="solid">
-          <Input
-            id="background-color"
-            type="color"
-            {...register('BackgroundColor')}
-          />
+          <div className="flex items-center justify-center min-w-[200px] md:min-w-[400px] h-auto mt-1">
+            <Input
+              className="max-w-[200px]"
+              id="background-color"
+              type="color"
+              {...register('BackgroundColor')}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

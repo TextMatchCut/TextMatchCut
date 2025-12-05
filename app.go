@@ -2,13 +2,13 @@ package main
 
 import (
 	"TextMatchCut/core"
-
 	"TextMatchCut/types"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image/png"
 	"log"
@@ -26,7 +26,8 @@ import (
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
 // NewApp creates a new App application struct
@@ -40,6 +41,15 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
 	a.checkAndEmitIfNoFfmpeg()
+}
+
+// CancelRun cancels the ongoing video generation process.
+func (a *App) Cancel() {
+	if a.cancelFunc != nil {
+		fmt.Println("Cancellation requested by frontend.")
+		a.cancelFunc()
+		a.cancelFunc = nil
+	}
 }
 
 func (a *App) GetDefaultAssetsPath() types.GetDefaultAssetsPathResponse {
@@ -57,27 +67,24 @@ func (a *App) Run(config types.Config) types.RunResponse {
 		return types.RunResponse{Success: false, Error: "FFmpeg not found in PATH. Please install FFmpeg."}
 	}
 
-	snippets := make([]types.TextSnippet, 0, 5)
-	for i := 0; i < 5; i++ {
-		snippet := core.GenerateRandomTextSnippet(config)
-		snippets = append(snippets, snippet)
-	}
+	// Create cancellable context for this specific run
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.cancelFunc = cancel
+	defer func() {
+		a.cancelFunc = nil // Cleanup when function exits
+	}()
 
-	if config.Verbose {
-		fmt.Printf("Generated %d text snippets\n", len(snippets))
-	}
-
-	aiSnippets, err := core.GetSnippets(config)
+	aiSnippets, err := core.GetSnippets(ctx, config)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			fmt.Println("Snippet generation was cancelled.")
+			return types.RunResponse{Success: false, Error: "Operation cancelled by user."}
+		}
 		fmt.Fprintf(os.Stderr, "Error getting snippets: %v\n", err)
 		return types.RunResponse{Success: false, Error: err.Error()}
 	}
 
-	// if config.FontSize == 50 { // Default value
-	// 	config.FontSize = int(float64(config.Height) * 0.05)
-	// }
-
-	videoData, fPath, err := generateFrames(config, aiSnippets, *a)
+	videoData, fPath, err := generateFrames(ctx, config, aiSnippets, *a)
 
 	// homeDir, err := os.UserHomeDir()
 	// save to user download dir
@@ -91,6 +98,10 @@ func (a *App) Run(config types.Config) types.RunResponse {
 	// config.OutputPath = filepath.Join(homeDir, ".textmatchcut", "output.mp4")
 
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			fmt.Println("Run operation was cancelled.")
+			return types.RunResponse{Success: false, Error: "Operation cancelled by user."}
+		}
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return types.RunResponse{Success: false, Error: err.Error()}
 	}
@@ -100,22 +111,29 @@ func (a *App) Run(config types.Config) types.RunResponse {
 }
 
 func (a *App) RenderPreview(config types.Config) types.RenderPreviewResponse {
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.cancelFunc = cancel // Make the cancel function available to a.Cancel()
+	defer func() {
+		a.cancelFunc = nil // Cleanup when function exits
+	}()
 
 	snippets := make([]types.TextSnippet, 0, 5)
 	for i := 0; i < 5; i++ {
 		snippet := core.GenerateRandomTextSnippet(config)
 		snippets = append(snippets, snippet)
 	}
-	// if config.HighlightRadius != 0 {
-	// 	highlightRadius = config.HighlightRadius
-	// } else {
-	// 	highlightRadius = float64(config.FontSize * len(config.HighlightedText))
-	// }
 
 	finalImage, err := core.GenerateFrame(1, config, snippets)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating preview: %v\n", err)
 		return types.RenderPreviewResponse{Success: false, Error: err.Error()}
+	}
+
+	select {
+	case <-ctx.Done():
+		fmt.Println("Preview operation was cancelled.")
+		return types.RenderPreviewResponse{Success: false, Error: "Operation cancelled by user."}
+	default:
 	}
 
 	var buffer bytes.Buffer
@@ -234,7 +252,7 @@ func generateUniqueFilename(prefix, extension string) string {
 }
 
 // Generate video frames and return base64 data
-func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) (string, string, error) {
+func generateFrames(ctx context.Context, config types.Config, aiSnippets []types.TextSnippet, a App) (string, string, error) {
 	if config.Verbose {
 		fmt.Printf("Generating video: %dx%d @ %dfps for %ds\n", config.Width, config.Height, config.FPS, config.Duration)
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
@@ -275,6 +293,13 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 
 	// Generate frames
 	for frameNum := 0; frameNum < totalFrames; frameNum++ {
+		// Check for cancellation signal
+		select {
+		case <-ctx.Done():
+			return "", "", ctx.Err() // Return cancellation error
+		default:
+			// Continue execution
+		}
 		// Select random snippet and font
 		finalImage, err := core.GenerateFrame(frameNum, config, aiSnippets)
 
@@ -331,7 +356,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 
 	fDir := filepath.Join(hDir, ".textmatchcut")
 
-	outputPath := filepath.Join(fDir, generateUniqueFilename("text_match_cut_", "mp4"))
+	outputPath := filepath.Join(fDir, generateUniqueFilename("text_match_cut_"+config.HighlightedText, "mp4"))
 
 	os.MkdirAll(fDir, 0755)
 
@@ -357,7 +382,7 @@ func generateFrames(config types.Config, aiSnippets []types.TextSnippet, a App) 
 	filterComplex := strings.Join(filterComplexParts, ";")
 	shutterPath := filepath.Join(os.TempDir(), "textmatchcut", "sfx", "shutter.wav")
 
-	cmd = exec.Command("ffmpeg",
+	cmd = exec.CommandContext(ctx, "ffmpeg",
 		"-y", // Overwrite output file
 		"-framerate", strconv.Itoa(config.FPS),
 		"-i", filepath.Join(tempDir, "frame_%05d.png"), // Video input
@@ -442,9 +467,11 @@ func (a *App) ShowFileOnExplorer(filePath string) {
 
 	// Use the appropriate command based on the OS
 	var cmd *exec.Cmd
+
+	fmt.Printf("Opening path %s", filePath)
 	switch go_runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("explorer", "/select,", filePath)
+		cmd = exec.Command("explorer", filePath)
 	case "darwin":
 		cmd = exec.Command("open", "-R", filePath)
 	default: // Linux and others

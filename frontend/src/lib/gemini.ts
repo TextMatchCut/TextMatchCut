@@ -10,7 +10,10 @@ const snippetSchema = z.object({
 
 const snippetsArraySchema = z.array(snippetSchema);
 
-export async function GetSnippetsGeminiWeb(config: Config) {
+export async function GetSnippetsGeminiWeb(
+  config: Config,
+  signal: AbortSignal
+) {
   const ai = new GoogleGenAI({
     apiKey: config.ApiKey,
   });
@@ -21,8 +24,13 @@ export async function GetSnippetsGeminiWeb(config: Config) {
     config: {
       responseMimeType: 'application/json',
       responseJsonSchema: z.toJSONSchema(snippetsArraySchema),
+      abortSignal: signal,
     },
   });
+
+  if (signal.aborted) {
+    return;
+  }
 
   const final = snippetsArraySchema.parse(JSON.parse(res.text!));
 

@@ -8,8 +8,6 @@ import MainView from './main.view';
 import Header from './components/header.web.component';
 import { Button } from './components/ui/button';
 import { ArrowDownIcon } from 'lucide-react';
-import Drawer from './components/drawer.component';
-import DrawerContent from './components/drawer-content.component';
 
 function App() {
   return (
@@ -36,14 +34,8 @@ function App() {
         )}
       >
         {!__DESKTOP__ ? <Header /> : null}
-        <div className="w-full h-full relative overflow-y-auto">
-          <MainView
-            drawer={
-              <Drawer>
-                <DrawerContent />
-              </Drawer>
-            }
-          />
+        <div className="w-full h-full relative overflow-y-auto scrollbar-hide">
+          <MainView />
         </div>
         {__DESKTOP__ ? <StatusBar /> : null}
         {!__DESKTOP__ ? <Toaster /> : null}

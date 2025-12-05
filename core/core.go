@@ -16,7 +16,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
@@ -998,17 +997,13 @@ func gaussianBlurRadius(radius float64, passes int) float64 {
 	return l + a
 }
 
-func GetSnippets(config types.Config) ([]types.TextSnippet, error) {
+func GetSnippets(ctx context.Context, config types.Config) ([]types.TextSnippet, error) {
 	var aiSnippets []types.TextSnippet
 	if config.Provider == "gemini" {
 		apiKey := config.ApiKey
 		if apiKey == "" {
 			return nil, fmt.Errorf("API key is required for Gemini provider")
 		}
-		// Create context with timeout to prevent indefinite blocking
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
 		snippets, err := gemini.GetSnippets(ctx, config)
 		if err != nil {
 			return nil, err
@@ -1021,10 +1016,6 @@ func GetSnippets(config types.Config) ([]types.TextSnippet, error) {
 		if apiKey == "" {
 			return nil, fmt.Errorf("API key is required for OpenAI provider")
 		}
-		// Create context with timeout to prevent indefinite blocking
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
 		snippets, err := openai.GetSnippets(ctx, apiKey, config)
 		if err != nil {
 			return nil, fmt.Errorf("Error getting snippets from OpenAI: %v", err)
