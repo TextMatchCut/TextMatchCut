@@ -2,4 +2,6 @@ build/bin
 node_modules
 frontend/dist
 frontend/public/lib.wasm
+frontend/wails
 .DS_Store
+yarn.lock
