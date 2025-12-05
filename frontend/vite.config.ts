@@ -8,21 +8,31 @@ import tailwindcss from '@tailwindcss/vite';
 const buildWasm = () => {
   return new Promise((resolve, reject) => {
     // The command to compile your Go code to WASM
-    const command = `GOOS=js GOARCH=wasm go build -o ${path.resolve(
+    const command = `go build -o ${path.resolve(
       __dirname,
       'public/lib.wasm'
     )} ${path.resolve(__dirname, '../lib')}`;
 
     console.log('Compiling WASM...');
-    exec(command, (err, stdout, stderr) => {
-      if (err) {
-        console.error('WASM Compilation Error:', stderr);
-        reject(err);
-        return;
+    exec(
+      command,
+      {
+        env: {
+          ...process.env,
+          GOOS: 'js',
+          GOARCH: 'wasm',
+        },
+      },
+      (err, stdout, stderr) => {
+        if (err) {
+          console.error('WASM Compilation Error:', stderr);
+          reject(err);
+          return;
+        }
+        console.log('WASM compiled successfully.');
+        resolve(stdout);
       }
-      console.log('WASM compiled successfully.');
-      resolve(stdout);
-    });
+    );
   });
 };
 
