@@ -61,7 +61,34 @@ func (a *App) GetDefaultAssetsPath() types.GetDefaultAssetsPathResponse {
 
 func (a *App) Run(config types.Config) types.RunResponse {
 
-	_, err := exec.LookPath("ffmpeg")
+	ffmpegPath, err := exec.LookPath("ffmpeg")
+
+	if err != nil {
+		var commonPaths []string
+		switch go_runtime.GOOS {
+		case "darwin":
+			commonPaths = []string{
+				"/usr/local/bin/ffmpeg",    // Standard Homebrew on Intel Macs
+				"/opt/homebrew/bin/ffmpeg", // Homebrew on Apple Silicon Macs
+			}
+		case "linux":
+			commonPaths = []string{"/usr/bin/ffmpeg"}
+		}
+
+		for _, p := range commonPaths {
+
+			fmt.Println("Looking for FFmpeg in", p)
+			if _, statErr := os.Stat(p); statErr == nil {
+				ffmpegPath = p
+				err = nil
+				break
+			} else {
+				fmt.Println("os.Stat error:", statErr)
+			}
+		}
+
+	}
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: FFmpeg not found in PATH. Please install FFmpeg.\n")
 		return types.RunResponse{Success: false, Error: "FFmpeg not found in PATH. Please install FFmpeg."}
@@ -84,7 +111,7 @@ func (a *App) Run(config types.Config) types.RunResponse {
 		return types.RunResponse{Success: false, Error: err.Error()}
 	}
 
-	videoData, fPath, err := generateFrames(ctx, config, aiSnippets, *a)
+	videoData, fPath, err := generateFrames(ctx, config, aiSnippets, ffmpegPath, *a)
 
 	// homeDir, err := os.UserHomeDir()
 	// save to user download dir
@@ -252,7 +279,7 @@ func generateUniqueFilename(prefix, extension string) string {
 }
 
 // Generate video frames and return base64 data
-func generateFrames(ctx context.Context, config types.Config, aiSnippets []types.TextSnippet, a App) (string, string, error) {
+func generateFrames(ctx context.Context, config types.Config, aiSnippets []types.TextSnippet, ffmpegPath string, a App) (string, string, error) {
 	if config.Verbose {
 		fmt.Printf("Generating video: %dx%d @ %dfps for %d snippets\n", config.Width, config.Height, config.FPS, len(aiSnippets))
 		fmt.Printf("Highlighted text: '%s'\n", config.HighlightedText)
@@ -385,8 +412,8 @@ func generateFrames(ctx context.Context, config types.Config, aiSnippets []types
 	filterComplexParts = append(filterComplexParts, amixFilter)
 	filterComplex := strings.Join(filterComplexParts, ";")
 	shutterPath := filepath.Join(os.TempDir(), "textmatchcut", "sfx", "shutter.wav")
-
-	cmd = exec.CommandContext(ctx, "ffmpeg",
+	fmt.Println("Using ffmpeg path " + ffmpegPath)
+	cmd = exec.CommandContext(ctx, ffmpegPath,
 		"-y", // Overwrite output file
 		"-framerate", strconv.Itoa(config.FPS),
 		"-i", filepath.Join(tempDir, "frame_%05d.png"), // Video input
