@@ -2,6 +2,5 @@ build/bin
 node_modules
 frontend/dist
 frontend/public/lib.wasm
-frontend/wailsjs
 .DS_Store
 yarn.lock
