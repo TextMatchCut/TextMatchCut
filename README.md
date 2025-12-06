@@ -36,6 +36,10 @@
 
 ## Download
 
+<p align="center">
+    <img src="./resources/repo/ss1.png" width="90%"><br/>
+</p>
+
 You can download the latest version for your operating system from the [**Releases**](https://github.com/TextMatchCut/TextMatchCut/releases/latest) page.
 
 ### Installation Instructions
