@@ -60,7 +60,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get -yq install libgtk-3-0 libwebkit2gtk-4.1-dev gcc-aarch64-linux-gnu
+          sudo apt-get -yq install libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config gcc-aarch64-linux-gnu
 
       - name: Add Go bin to PATH (Linux/macOS)
         if: runner.os != 'Windows'
@@ -71,7 +71,12 @@ jobs:
         run: echo "$env:USERPROFILE\go\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Build Wails App
-        run: wails build
+        run: |
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+              wails build -tags webkit2_41
+          else
+            wails build
+          fi
 
       - name: Create DMG (macOS only)
         if: runner.os == 'macOS'
