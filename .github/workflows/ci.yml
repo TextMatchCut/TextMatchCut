@@ -64,10 +64,15 @@ jobs:
         if: runner.os == 'Windows'
         run: echo "$env:USERPROFILE\go\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Build Wails App
-        if: runner.os != 'Linux'
+      - name: Build Wails App (Windows)
+        if: runner.os == 'Windows'
         run: |
           wails build
+
+      - name: Build Wails App (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          wails build -platform darwin/universal
 
       - name: Build Wails App (Linux)
         if: runner.os == 'Linux'
