@@ -36,22 +36,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set version variable
+        run: echo "__APP_VERSION__=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+        shell: bash
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.22"
 
       - name: Setup Bun
-        # if: runner.os != 'Windows'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      # - name: Setup Bun (Windows)
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     powershell -c "irm bun.sh/install.ps1|iex"
-      #     echo "$env:USERPROFILE\.bun\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -71,6 +68,7 @@ jobs:
         run: echo "$env:USERPROFILE\go\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Build Wails App
+        if: runner.os != 'Linux'
         run: |
           wails build
 
@@ -92,8 +90,19 @@ jobs:
             --window-pos 200 120 \
             --window-size 600 400 \
             --app-drop-link 425 190 \
-            "dist/TextMatchCut-${{ github.ref_name || 'dev' }}.dmg" \
+            "dist/TextMatchCut-${{ github.ref_name || 'dev' }}-darwin-universal.dmg" \
             "build/bin/TextMatchCut.app"
+
+      - name: Rename binary (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mv build/bin/TextMatchCut build/bin/TextMatchCut-${{ github.ref_name || 'dev' }}-linux-amd64
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mv build/bin/TextMatchCut.exe build/bin/TextMatchCut-${{ github.ref_name || 'dev' }}-windows-amd64.exe
 
       - name: Upload Artifacts (Windows/Linux)
         if: runner.os != 'macOS'
@@ -112,8 +121,10 @@ jobs:
   # release:
   #   needs: build
   #   runs-on: ubuntu-latest
-  #   if: startsWith(github.ref, 'refs/tags/')
   #   steps:
+  #     - name: Prepare output folder
+  #       run: mkdir -p release-assets
+
   #     - name: Download all artifacts
   #       uses: actions/download-artifact@v4
   #       with:

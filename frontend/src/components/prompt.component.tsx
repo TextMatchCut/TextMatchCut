@@ -29,7 +29,7 @@ const Prompt = () => {
   // const config = useAppContext(s => s.config);
   // const setConfig = useAppContext(s => s.setConfig);
   const [promptText, setPromptText] = useState(
-    "Respond with $SnippetSize different text snippets with the text '$HighlightedText'. Each snippet should have between $MinLines and $MaxLines sentences. Make sure that the highlighted text is not always at the start but random."
+    "Respond with $SnippetSize different text snippets including the word '$HighlightedText' in a meaningful way. Each snippet should have between $MinLines and $MaxLines sentences. Make sure that the word $HighlightedText is not always at the start but random."
   );
 
   const parsePrompt = (prompt: string) => {

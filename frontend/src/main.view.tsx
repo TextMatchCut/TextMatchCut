@@ -505,7 +505,7 @@ const MainView: React.FC = () => {
             <CardDescription className="w-[70%] m-auto">
               This app generates a video with text cut matches based on the
               provided snippets. Change the settings below to customize the
-              output.
+              output. (Runs locally)
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 max-w-[1400px] m-auto rounded-lg p-4">
