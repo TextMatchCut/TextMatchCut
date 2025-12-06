@@ -40,6 +40,9 @@ const buildWasm = () => {
 const watchGoLibPlugin = () => {
   return {
     name: 'watch-go-lib',
+    async buildStart() {
+      await buildWasm();
+    },
     // This hook is called when the dev server is configured
     async configureServer(server) {
       // 1. Initial build when the server starts
