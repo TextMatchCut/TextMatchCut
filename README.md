@@ -30,6 +30,10 @@
     <img src="./resources/repo/Web-Dev.gif" width="90%"><br/>
 </p>
 
+## Try it on the Web
+
+[textmatchcut.github.io/](https://textmatchcut.github.io/)
+
 ## Download
 
 You can download the latest version for your operating system from the [**Releases**](https://github.com/TextMatchCut/TextMatchCut/releases/latest) page.
