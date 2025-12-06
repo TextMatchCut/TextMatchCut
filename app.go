@@ -3,6 +3,7 @@ package main
 import (
 	"TextMatchCut/core"
 	"TextMatchCut/types"
+	"TextMatchCut/util"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -18,7 +19,6 @@ import (
 	go_runtime "runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -439,7 +439,7 @@ func generateFrames(ctx context.Context, config types.Config, aiSnippets []types
 
 	/* hides the console window on Windows, because it looks ugly */
 	if go_runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		util.SetSysProcAttr(cmd)
 	}
 
 	if config.Verbose {
