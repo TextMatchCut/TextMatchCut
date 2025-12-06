@@ -8,6 +8,7 @@ import MainView from './main.view';
 import Header from './components/header.web.component';
 import { Button } from './components/ui/button';
 import { ArrowDownIcon } from 'lucide-react';
+import { DEFAULT_SERIALIZED_APP_STATE_KEY } from '@constants';
 
 function App() {
   return (
@@ -23,7 +24,7 @@ function App() {
             </div>
             <Button
               onClick={() => {
-                localStorage.removeItem('app');
+                localStorage.removeItem(DEFAULT_SERIALIZED_APP_STATE_KEY);
                 window.location.reload();
               }}
               className="px-4 py-2 bg-blue-500 text-white rounded"

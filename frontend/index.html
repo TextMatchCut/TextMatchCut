@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <script src="./coi-serviceworker.min.js"></script>
+    <script>
+      // The COI service worker is only needed for the web version to enable SharedArrayBuffer.
+      if (typeof window.wails === 'undefined') {
+        console.log('Loading COI service worker for web version');
+        const script = document.createElement('script');
+        script.src = './coi-serviceworker.min.js';
+        document.head.appendChild(script);
+      }
+    </script>
     <meta charset="UTF-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>TextMatchCut</title>
