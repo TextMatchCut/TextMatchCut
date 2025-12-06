@@ -41,7 +41,9 @@ const ConfigForm: React.FC<React.PropsWithChildren> = ({ children }) => {
     if (highlightedText && typeof fontSize === 'number' && fontSize > 0) {
       // const newRadius = fontSize * highlightedText.length;
       const newRadius = fontSize * highlightedText.length * 0.85;
-      setValue('HighlightRadius', newRadius, { shouldValidate: true });
+      setValue('HighlightRadius', Math.floor(newRadius), {
+        shouldValidate: true,
+      });
     }
   }, [highlightedText, fontSize]);
 
