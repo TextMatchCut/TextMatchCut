@@ -1,5 +1,5 @@
 let go: any;
-import { GO_RenderFrameWeb_Input } from '@types';
+import { Config, GO_RenderFrameWeb_Input } from '@types';
 import '../wasm/wasm_exec.js';
 import { loadWasmBackend } from './lib/utils.js';
 import * as Comlink from 'comlink';
@@ -26,7 +26,14 @@ async function renderFrameWeb(
   );
 }
 
+async function generateRandomTextSnippetWeb(config: Config) {
+  return await (self as any).GO_GenerateRandomTextSnippetWeb(
+    JSON.stringify(config)
+  );
+}
+
 Comlink.expose({
   init,
   renderFrameWeb,
+  generateRandomTextSnippetWeb,
 });

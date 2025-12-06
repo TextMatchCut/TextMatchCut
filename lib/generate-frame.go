@@ -6,7 +6,6 @@ package main
 import (
 	"TextMatchCut/core"
 	"TextMatchCut/types"
-	"TextMatchCut/util"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -29,15 +28,20 @@ func GenerateFrameAsBase64(frameNum int, config types.Config, snippets []types.T
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-func GO_RenderFrameWeb(input types.GO_RenderFrameWeb, snippets []types.AITextSnippets) (string, error) {
+func GO_GenerateRandomTextSnippetWeb(config types.Config) []types.TextSnippet {
+	dummySnippets := make([]types.TextSnippet, 0)
+	for i := 0; i < config.SnippetSize; i++ {
+		generated_snippet := core.GenerateRandomTextSnippet(config)
+		dummySnippets = append(dummySnippets, generated_snippet)
+	}
+	return dummySnippets
+}
+
+func GO_RenderFrameWeb(input types.GO_RenderFrameWeb, snippets []types.TextSnippet) (string, error) {
 	if len(snippets) == 0 {
 		// Generate dummy snippets for testing
 		fmt.Println("No snippets provided, generating dummy snippets for testing.")
-		dummySnippets := make([]types.TextSnippet, 0)
-		for i := 0; i < 5; i++ {
-			generated_snippet := core.GenerateRandomTextSnippet(input.Config)
-			dummySnippets = append(dummySnippets, generated_snippet)
-		}
+		dummySnippets := GO_GenerateRandomTextSnippetWeb(input.Config)
 		return GenerateFrameAsBase64(
 			input.FrameNum,
 			input.Config,
@@ -48,7 +52,7 @@ func GO_RenderFrameWeb(input types.GO_RenderFrameWeb, snippets []types.AITextSni
 	return GenerateFrameAsBase64(
 		input.FrameNum,
 		input.Config,
-		util.ParseSnippetsJSON(snippets, input.Config.HighlightedText),
+		snippets,
 	)
 }
 
@@ -65,7 +69,7 @@ func main() {
 		}
 		snippets := p[1].String()
 
-		var snippetsArray []types.AITextSnippets
+		var snippetsArray []types.TextSnippet
 		if snippets != "" && snippets != "\"\"" { // Also check for quoted empty string
 			// Unmarshal the snippets JSON into a Go slice
 			if err := json.Unmarshal([]byte(snippets), &snippetsArray); err != nil {
@@ -73,7 +77,7 @@ func main() {
 			}
 		}
 
-		fmt.Printf("Snippets input: '%s', Array length: %d\n", snippets, len(snippetsArray))
+		fmt.Printf("Snippets input length: %d\n", len(snippetsArray))
 
 		result, err := GO_RenderFrameWeb(input, snippetsArray)
 
@@ -82,6 +86,23 @@ func main() {
 		}
 
 		return js.ValueOf(result)
+	}))
+
+	js.Global().Set("GO_GenerateRandomTextSnippetWeb", js.FuncOf(func(this js.Value, p []js.Value) interface{} {
+		if len(p) != 1 {
+			return js.ValueOf("Invalid argument count")
+		}
+		configJSON := p[0].String()
+		var config types.Config
+		if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
+			return js.ValueOf("Error: failed to unmarshal JSON input: " + err.Error())
+		}
+		result := GO_GenerateRandomTextSnippetWeb(config)
+		resultJSON, err := json.Marshal(result)
+		if err != nil {
+			return js.ValueOf("Error: failed to marshal snippets to JSON: " + err.Error())
+		}
+		return js.ValueOf(string(resultJSON))
 	}))
 
 	/*

@@ -29,13 +29,14 @@ import { EventsOn, EventsOff } from '../wailsjs/runtime';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { configSchema } from '@/lib/validation';
-import { DEFAULT_CONFIG } from '@constants';
+import { DEFAULT_CONFIG, DEFAULT_SERIALIZED_APP_STATE_KEY } from '@constants';
 import { Config, GO_RenderFrameWeb_Input, GOWorkerType } from '@types';
 import { useShallow } from 'zustand/react/shallow';
 import GOWorker from './worker.ts?worker';
 import { GetSnippetsWeb } from '@/lib/snippet';
 import Drawer from './components/drawer.component';
 import DrawerContent from './components/drawer-content.component';
+import { serializeState, parseState } from '@/lib/utils';
 
 const MainView: React.FC = () => {
   const {
@@ -69,7 +70,12 @@ const MainView: React.FC = () => {
   const abortControllerRef = useRef<AbortController | null>(null); // For web cancellation
   const methods = useForm({
     resolver: zodResolver(configSchema),
-    defaultValues: { ...DEFAULT_CONFIG, Type: 'render' as const },
+    defaultValues: {
+      ...DEFAULT_CONFIG,
+      ...parseState(),
+      //typescript is not happy without this
+      Type: 'render' as const,
+    },
     mode: 'onChange',
   });
 
@@ -148,13 +154,16 @@ const MainView: React.FC = () => {
     }
     console.log('Is desktop:', __DESKTOP__);
     __DESKTOP__ ? init() : initWeb();
-    // let saveInterval = setInterval(() => {
-    //   console.log('Saving app state to localStorage...');
-    //   localStorage.setItem('app', serializeState());
-    // }, 10000);
+    let saveInterval = setInterval(() => {
+      console.log('Saving app state to localStorage...');
+      localStorage.setItem(
+        DEFAULT_SERIALIZED_APP_STATE_KEY,
+        serializeState(methods.getValues())
+      );
+    }, 10000);
 
     return () => {
-      // clearInterval(saveInterval);
+      clearInterval(saveInterval);
     };
   }, []);
 
@@ -283,8 +292,12 @@ const MainView: React.FC = () => {
         Config: config,
       };
 
-      // Get snippets once before the loop
-      const snippets = await GetSnippetsWeb(input.Config, signal);
+      const snippets = await GetSnippetsWeb(
+        input.Config,
+        signal,
+        wasmWorkerRef.current!
+      );
+
       if (!snippets || !Array.isArray(snippets) || snippets.length === 0) {
         return toast({
           title: 'Error',
@@ -297,7 +310,6 @@ const MainView: React.FC = () => {
       // FIXME: could be problematic if ai messes up
       const totalFrames = config.SnippetSize;
 
-      // Generate all frames
       for (let i = 0; i < totalFrames; i++) {
         if (signal.aborted) {
           throw new DOMException('Aborted by user', 'AbortError');

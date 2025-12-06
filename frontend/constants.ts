@@ -30,6 +30,8 @@ export const DEFAULT_FEATHER = 0.9;
 export const DEFAULT_SUGGESTED_GEMINI_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_SUGGESTED_OPENAI_MODEL = 'gpt-3.5-turbo';
 
+export const DEFAULT_SERIALIZED_APP_STATE_KEY = 'app';
+
 export const DEFAULT_CONFIG = {
   Width: DEFAULT_WIDTH,
   Height: DEFAULT_HEIGHT,

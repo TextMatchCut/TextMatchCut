@@ -4,7 +4,7 @@ import { toBlobURL } from '@ffmpeg/util';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import useAppContext from '@/store';
 import { Config } from '@types';
-import { DEFAULT_CONFIG } from '@constants';
+import { DEFAULT_CONFIG, DEFAULT_SERIALIZED_APP_STATE_KEY } from '@constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -92,25 +92,25 @@ export const serializeState = (config: Config) => {
 
 type SetConfig = Config | ((config: Config) => Config);
 
-const parseState = () => {
+export const parseState = () => {
   try {
-    let app = localStorage.getItem('app');
+    let app = localStorage.getItem(DEFAULT_SERIALIZED_APP_STATE_KEY);
     if (app) {
       app = JSON.parse(app);
-      if (!app || typeof app !== 'object') return DEFAULT_CONFIG;
+      if (!app || typeof app !== 'object') return {};
       const typedConfig = app as {
         config: Config;
         __APP_VERSION__: string;
       };
       if (typedConfig.__APP_VERSION__ !== __APP_VERSION__) {
         console.warn('App version mismatch. Resetting config to default.');
-        return DEFAULT_CONFIG;
+        return {};
       }
-      return typedConfig.config || DEFAULT_CONFIG;
+      return typedConfig.config || {};
     }
-    return DEFAULT_CONFIG;
+    return {};
   } catch (error) {
     console.error('Failed to parse app config from localStorage:', error);
-    return DEFAULT_CONFIG;
+    return {};
   }
 };

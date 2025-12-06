@@ -24,4 +24,5 @@ export type GOWorkerType = Comlink.Remote<{
     input: GO_RenderFrameWeb_Input,
     snippets: any
   ) => Promise<string>;
+  generateRandomTextSnippetWeb: (config: Config) => Promise<any>;
 }>;
