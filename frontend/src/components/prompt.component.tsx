@@ -60,8 +60,7 @@ const Prompt = () => {
   return (
     <div className="max-w-[600px] m-auto my-5">
       <Tabs
-        // defaultValue={config.AIEnabled ? config.Provider : 'random'}
-        defaultValue={'random'}
+        defaultValue={config.AIEnabled ? config.Provider : 'random'}
         onValueChange={value => {
           switch (value) {
             case 'random':
