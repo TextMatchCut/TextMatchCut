@@ -72,13 +72,14 @@ jobs:
 
       - name: Build Wails App
         run: |
-          if [[ "${{ runner.os }}" == "Linux" ]]; then
-              wails build -tags webkit2_41
-          else
-            wails build
-          fi
+          wails build
 
-      - name: Create DMG (macOS only)
+      - name: Build Wails App (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          wails build -tags webkit2_41
+
+      - name: Create DMG (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install create-dmg
